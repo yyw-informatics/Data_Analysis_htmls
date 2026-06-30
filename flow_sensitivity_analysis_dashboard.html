@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sensitivity Analysis — synthetic demonstration data</title>
+  <script>
+    window.MathJax = {
+      tex: { displayMath: [["\\[", "\\]"]], inlineMath: [["\\(", "\\)"]] },
+      svg: { fontCache: "global" }
+    };
+  </script>
+  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #16202a;
+      --muted: #566273;
+      --border: #d6dde5;
+      --panel: #f7f9fb;
+      --accent: #2f6f8f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: #ffffff;
+    }
+    header {
+      padding: 18px 28px;
+      border-bottom: 1px solid var(--border);
+      background: #ffffff;
+    }
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.15;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    main { background: #fbfcfd; }
+    section {
+      padding: 22px 28px;
+      border-bottom: 1px solid var(--border);
+      background: #ffffff;
+    }
+    section:nth-of-type(even) { background: var(--panel); }
+    h2 {
+      margin: 0 0 12px;
+      font-size: 23px;
+      line-height: 1.2;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 0 0 8px;
+      font-size: 17px;
+      line-height: 1.25;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    p, li {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+    .schematic {
+      padding-top: 14px;
+      padding-bottom: 14px;
+      background: #ffffff;
+    }
+    .schematic iframe {
+      width: 100%;
+      height: 305px;
+      border: 1px solid var(--border);
+      background: white;
+    }
+    .category-banner {
+      background: linear-gradient(180deg, #f1f7fb 0%, #ffffff 100%);
+      border-left: 5px solid var(--accent);
+      padding: 18px 28px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .category-banner h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 4px 0 8px;
+      color: var(--muted);
+    }
+    .category-banner .banner-tag {
+      display: inline-block;
+      background: var(--accent);
+      color: white;
+      font-size: 23px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 6px 14px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+    .category-banner p {
+      margin: 4px 0;
+      color: var(--ink);
+      font-size: 14px;
+    }
+    .category-banner .banner-label {
+      display: block;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 12px 0 2px;
+    }
+    .param {
+      margin: 4px 0 8px;
+      font-size: 14px;
+      color: var(--ink);
+    }
+    .param .param-name {
+      font-weight: 700;
+    }
+    .param .param-def {
+      color: var(--muted);
+    }
+    .param ul.param-values {
+      margin: 3px 0 0;
+      padding-left: 22px;
+    }
+    .param ul.param-values li {
+      margin: 2px 0;
+      font-size: 13.5px;
+      color: var(--ink);
+    }
+    .gate-index {
+      background: linear-gradient(180deg, #eef5fa 0%, #ffffff 100%);
+      border-left: 5px solid var(--accent);
+    }
+    .gate-index ol, .gate-index ul {
+      margin: 10px 0 0;
+      padding-left: 22px;
+    }
+    .gate-index ul ul {
+      margin: 4px 0 2px;
+    }
+    .gate-index li {
+      margin: 6px 0;
+      color: var(--ink);
+      font-size: 14px;
+    }
+    .gate-index li a {
+      color: var(--accent);
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .gate-index li a:hover { text-decoration: underline; }
+    .definitions-box {
+      background: #fbfbf3;
+      border: 1px solid #e6e2cf;
+      padding: 10px 14px;
+      margin: 0 0 14px;
+      max-width: 1180px;
+    }
+    .definitions-box .term {
+      font-family: "Cambria Math", "STIX Two Math", Cambria, Georgia, serif;
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 15px;
+    }
+    .definitions-box dt {
+      margin: 4px 0 0;
+    }
+    .definitions-box dd {
+      margin: 0 0 6px 24px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .summary-table td.highlight-cell {
+      background: #fff6e0;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .summary-table tr.highlight-row td {
+      background: #fef9ef;
+    }
+    .summary-table tr.highlight-row td:first-child {
+      border-left: 3px solid #c98a1f;
+      padding-left: 6px;
+      font-weight: 700;
+    }
+    .doc-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .doc-item {
+      min-width: 0;
+      padding: 10px 0;
+      border-top: 2px solid var(--border);
+    }
+    .doc-item strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 13px;
+      color: var(--ink);
+    }
+    .note {
+      max-width: 1120px;
+      margin: 6px 0 12px;
+      color: var(--muted);
+    }
+    .callout {
+      max-width: 1180px;
+      padding: 12px 14px;
+      border-left: 4px solid var(--accent);
+      background: #eef6f9;
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .callout .note-list {
+      margin: 0;
+      color: var(--ink);
+    }
+    .callout .note-list li {
+      color: var(--ink);
+    }
+    .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 12px 0;
+    }
+    .insight-item {
+      min-width: 0;
+      padding: 11px 0;
+      border-top: 2px solid var(--border);
+    }
+    .insight-item strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--ink);
+      font-size: 13px;
+    }
+    .scroll-table {
+      width: 100%;
+      overflow-x: auto;
+    }
+    .parameter-list {
+      max-width: 1180px;
+      margin: 4px 0 14px;
+      padding-left: 20px;
+    }
+    .parameter-list li {
+      margin-bottom: 10px;
+    }
+    .parameter-list strong {
+      color: var(--ink);
+    }
+    .parameter-list .definition {
+      color: var(--muted);
+    }
+    .parameter-list .tested-values {
+      display: block;
+      margin-top: 2px;
+      color: var(--ink);
+      font-size: 13px;
+    }
+    .summary-table tr.primary-row td {
+      background: #fff6e0;
+    }
+    .summary-table tr.primary-row td:first-child {
+      border-left: 3px solid #c98a1f;
+      padding-left: 6px;
+    }
+    .callout li.callout-highlight {
+      font-weight: 700;
+      background: #fff6e0;
+      padding: 2px 6px;
+      margin-left: -6px;
+      border-radius: 3px;
+    }
+    .note-list {
+      max-width: 1180px;
+      margin: 6px 0 12px;
+      padding-left: 20px;
+    }
+    .note-list li {
+      margin-bottom: 4px;
+    }
+    .note-list ul {
+      margin: 4px 0 4px;
+      padding-left: 22px;
+    }
+    .sub-head {
+      display: block;
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--accent);
+      margin: 16px 0 4px;
+    }
+    .math-details {
+      max-width: 1180px;
+      margin: 8px 0 4px;
+      border-top: 2px solid var(--border);
+      padding-top: 10px;
+    }
+    .math-details summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .math-block {
+      padding: 8px 0 2px;
+      color: var(--ink);
+    }
+    .audit-table summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--ink);
+      margin: 10px 0;
+    }
+    .plot-slot { display: none; }
+    .plot-slot.active { display: block; }
+    .plot-frame {
+      width: 100%;
+      border: 0;
+      display: block;
+      background: #ffffff;
+    }
+    .plot-frame.xxtall { height: 880px; }
+    .plot-frame.xtall { height: 760px; }
+    .plot-frame.tall { height: 700px; }
+    .plot-frame.medium { height: 500px; }
+    .plot-frame.short { height: 430px; }
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 13px;
+      background: white;
+    }
+    .summary-table th, .summary-table td {
+      border-bottom: 1px solid var(--border);
+      padding: 7px 8px;
+      text-align: left;
+      white-space: nowrap;
+    }
+    .summary-table th { color: var(--muted); font-weight: 700; }
+    .summary-table th[title] {
+      cursor: help;
+      text-decoration: underline dotted;
+      text-underline-offset: 3px;
+    }
+    .summary-table td.wrap, .summary-table th.wrap {
+      white-space: normal;
+      min-width: 260px;
+    }
+    @media (max-width: 1050px) {
+      .doc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .insight-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 680px) {
+      header, section { padding-left: 16px; padding-right: 16px; }
+      .doc-grid { grid-template-columns: 1fr; }
+      .schematic iframe { height: 340px; }
+    }
+  </style>
+</head>
+<body>
+  <header><h1>Sensitivity Analysis — synthetic demonstration data</h1></header>
+  <main>
+    <section class="gate-index">
+      <h2>Analysis workflow</h2>
+      <p class="note">Each result is one antigen &times; parent-subset measurement from a sample. Results move through three classification gates and are then summarized as two endpoints. Each gate applies a single threshold whose candidate values are swept in the section below.</p>
+      <ul>
+        <li><a href="#cat-qc">QC acceptance</a>: is the sample usable? Failures are <em>Not Evaluable</em>.</li>
+        <li><a href="#cat-positivity">Positivity</a>: does the raw probe frequency exceed the background cutoff T? Results are <em>Not Detected</em> or detected above background.</li>
+        <li><a href="#cat-quantifiability">Quantifiability (LLOQ)</a>: are there at least N antigen-specific cells? Results are <em>Detected below LLOQ</em> or <em>Quantifiable</em>.</li>
+        <li><a href="#cat-frequency">Endpoints</a>: the Quantifiable results are summarized as two endpoints:
+          <ul>
+            <li><a href="#q-frequency-size">Ag-specific frequency</a></li>
+            <li><a href="#q-foldchange-size">Baseline-to-peak fold change</a></li>
+          </ul>
+        </li>
+      </ul>
+    </section>
+    <section class="gate-index">
+      <h2>Analysis questions</h2>
+      <p class="note">Common questions about this analysis &mdash; <strong>each question is a link</strong>; click it to jump straight to the section that answers it.</p>
+      <ul>
+        <li><a href="#cat-qc">Which viability gate should we require?</a></li>
+        <li><a href="#cat-positivity">What is the positivity threshold, and how is it set?</a></li>
+        <li><a href="#cat-quantifiability">What count makes a result reliable enough to use (Quantifiable)?</a></li>
+        <li><a href="#q-frequency-size">How large is the antigen-specific memory B-cell response?</a></li>
+        <li><a href="#q-frequency-threshold">Does the positivity threshold change the Ag-specific frequency?</a></li>
+        <li><a href="#q-frequency-robustness">Which threshold choice moves the Ag-specific frequency most?</a></li>
+        <li><a href="#q-covid-baseline">For Treatment-2-first, which baseline should we use?</a></li>
+        <li><a href="#q-foldchange-positivity">Does the positivity threshold change the fold change?</a></li>
+        <li><a href="#q-foldchange-count">Does the quantifiability threshold (N) change the fold change?</a></li>
+        <li><a href="#q-foldchange-robustness">Which threshold choice moves the fold change most?</a></li>
+        <li><a href="#q-foldchange-size">How much do responses rise from baseline to peak (recommended settings)?</a></li>
+        <li><a href="#q-foldchange-explorer">Explore the fold change under thresholds I choose.</a></li>
+      </ul>
+    </section>
+    <section>
+      <h2>Math reference</h2>
+      <p class="note">Formal definitions and formulas, collapsed for readability.</p>
+      <details class="math-details">
+  <summary>Show formal definitions</summary>
+  <div class="math-block">
+    <p class="note">The antigen-specific count and frequency are background-subtracted against the matched SA-only control, then normalized within the parent subset (P = parent-subset count):</p>
+    \[
+      N = Y_{\text{probe}} - Y_{\text{SA}}, \qquad
+      \hat f_{\text{parent}} = \frac{Y_{\text{probe}} - Y_{\text{SA}}}{P} = \%_{\text{probe}} - \%_{\text{SA}}
+    \]
+    <p class="note">Positivity uses the raw (un-subtracted) probe frequency against the background cutoff T:</p>
+    \[
+      \text{positive} \iff \frac{Y_{\text{probe}}}{P} > T
+    \]
+    <p class="note">The background cutoff T is estimated from the matched SA-only control frequencies (panel-specific for Antigen B and Antigen C):</p>
+    \[
+      T_{95} = Q_{0.95}, \quad
+      T_{99} = Q_{0.99}, \quad
+      T_{\text{MAD}} = \operatorname{median} + 3\,\operatorname{MAD}, \quad
+      T_{\text{SD}} = \operatorname{mean} + 3\,\operatorname{SD}
+    \]
+    <p class="note">Quantifiability depends on the count N alone. X is the parent-count depth at the LLOQ &mdash; an adequacy diagnostic, never a gate:</p>
+    \[
+      X = \left\lceil \frac{N}{f_{\text{LLOQ}}} \right\rceil
+    \]
+    <p class="note">Fold change is the ratio of background-subtracted frequencies between visits. A V1 or V4 baseline whose count is below the trigger is set to the 0.02% floor (imputed and labeled):</p>
+    \[
+      \text{FC} = \frac{\hat f_{\text{parent}}(\text{follow-up})}{\hat f_{\text{parent}}(\text{baseline})}, \qquad
+      f_{\text{floor}} = 0.02\%
+    \]
+  </div>
+</details>
+    </section>
+    <section class="schematic">
+      <h2>Schematic: B-cell Gating Hierarchy and Antigen-Specific Readout</h2>
+      <iframe src="sankey_bcell_hierarchy_schematic.html" title="Schematic: B-cell Gating Hierarchy and Antigen-Specific Readout"></iframe>
+    </section>
+
+    <section class="category-banner" id="cat-qc">
+      <span class="banner-tag">QC acceptance</span>
+      <h2>Not Evaluable, and the viability gate</h2>
+      <p>A sample is usable only with adequate viability, a matched SA-only control, comparable parent counts, and no unrecoverable artifact. Viability is applied as an inclusion gate and swept across candidate cutoffs.</p>
+      <p class="banner-label">Parameters tested</p>
+      <div class="param"><span class="param-name">Viability inclusion gate.</span> <span class="param-def">How strict the live-cell requirement is; swept rather than fixed at one cut. Only impossible viability values are removed outright.</span><ul class="param-values"><li><strong>none</strong> &mdash; include any sample with a measured viability value</li><li><strong>&gt;= 70</strong> &mdash; require at least 70% live cells</li><li><strong>&gt;= 75</strong> &mdash; require at least 75% live cells</li></ul></div>
+    </section>
+    <section>
+      <h2>Viability gate sensitivity</h2>
+      <p class="note">Pass rate at each viability gate (left) and the additional data lost by tightening, in percentage points (right). The no-gate row passes 100% of measured samples.</p>
+      <div class="scroll-table"><table class="summary-table"><thead><tr><th class="" title="Candidate minimum percent viability required for a source sample record to pass this sensitivity screen.">viability threshold</th><th class="" title="Unique source sample records represented in the Stage 4 sensitivity input.">n source sample records</th><th class="" title="Source sample records with a non-missing viability value.">n measured</th><th class="" title="Source sample records with viability at or above the candidate threshold (count and percent of measured).">source sample records passing, n (%)</th><th class="" title="Unique source sample records with measured viability below the candidate threshold.">n below threshold</th><th class="" title="Unique source sample records without a usable viability value.">n missing viability</th><th class="" title="Normalized antigen-subset results whose source sample record passes the candidate threshold (count and percent of measured).">antigen-subset results passing, n (%)</th></tr></thead><tbody><tr><td>none (no gate)</td><td>168</td><td>168</td><td>168 (100.0%)</td><td>0</td><td>0</td><td>1,008 (100.0%)</td></tr><tr><td>70%</td><td>168</td><td>168</td><td>156 (92.9%)</td><td>12</td><td>0</td><td>936 (92.9%)</td></tr><tr><td>75%</td><td>168</td><td>168</td><td>152 (90.5%)</td><td>16</td><td>0</td><td>912 (90.5%)</td></tr></tbody></table></div>
+      <iframe class="plot-frame short" src="sensitivity_dashboard_assets/viability_threshold_sensitivity.html" title="Viability gate sensitivity"></iframe>
+    </section>
+
+    <section class="category-banner" id="cat-positivity">
+      <span class="banner-tag">Positivity</span>
+      <h2>Detected vs Not Detected</h2>
+      <ul class="note-list">
+        <li>A result is positive when its <strong>raw probe frequency</strong> exceeds the background cutoff T estimated from matched SA-only controls.</li>
+        <li>Antigen B and Antigen C use <strong>panel-specific</strong> cutoffs; Antigen A uses a pooled cutoff.</li>
+        <li>Positivity uses the raw probe frequency; the antigen-specific frequency reported as an endpoint is background-subtracted.</li>
+      </ul>
+      <p class="banner-label">Parameters tested</p>
+      <div class="param"><span class="param-name">Background cutoff method (T).</span> <span class="param-def">How the background cutoff T is estimated from the matched SA-only controls; a result is positive when its raw probe frequency exceeds T.</span><ul class="param-values"><li><strong>p95</strong> &mdash; 95th percentile of the matched SA-only control frequencies</li><li><strong>median_3mad</strong> &mdash; median + 3 x MAD of the controls, where MAD is the median absolute deviation (a robust, outlier-resistant measure of spread)</li><li><strong>mean_3sd</strong> &mdash; mean + 3 x SD (standard deviation) of the controls</li><li><strong>p99</strong> &mdash; 99th percentile of the controls (strictest cutoff)</li></ul></div>
+    </section>
+    <section>
+      <h2>Background cutoff sensitivity</h2>
+      <ul class="note-list">
+        <li>Detection and quantifiable rates are shown among evaluable results under each cutoff method.</li>
+        <li>Detection depends on the method alone, so it is shown once per subset.</li>
+        <li>Quantifiable rates are shown for N = 3 and N = 5.</li>
+        <li>By count, mean+3&middot;SD is the strictest method and median+3&middot;MAD the most permissive.</li>
+        <li>So the positivity method changes retention more than N or f<sub>LLOQ</sub>.</li>
+      </ul>
+      <iframe class="plot-frame medium" src="sensitivity_dashboard_assets/background_threshold_overview.html" title="Background cutoff sensitivity"></iframe>
+      <details class="audit-table">
+        <summary>Background cutoffs and control counts</summary>
+        <p class="note">The cutoff T each method produces per antigen and subset, the number of SA controls behind it, and any fallback, zero-MAD, or underpowered flag.</p>
+        <div class="scroll-table"><table class="summary-table"><thead><tr><th class="" title="Antigen probe (Antigen A, Antigen B, or Antigen C).">antigen</th><th class="" title="Parent B-cell subset (IgD- or CD27+IgD-).">subset</th><th class="" title="Background cutoff method: p95 / p99 = percentile of SA-control frequencies; median_3mad = median + 3*MAD; mean_3sd = mean + 3*SD.">method</th><th class="" title="The actual cutoff value T this method produces. A sample is called positive when Y/P &gt; T.">frequency cutoff</th><th class="" title="Number of matched SA-only control records used to estimate this cutoff.">n SA controls</th><th class="" title="True if the SA-control count was too small for a stable cutoff estimate.">underpowered</th><th class="" title="True if a fallback rule was applied because the primary method could not produce a usable cutoff.">fallback</th><th class="" title="True if the MAD of the SA-control distribution was zero (degenerate case for the MAD method).">zero MAD</th><th class="" title="True if a configured minimum-cutoff floor replaced the method&#39;s raw estimate.">floor applied</th></tr></thead><tbody><tr><td>Antigen A</td><td>CD27+IgD-</td><td>p95</td><td>0.105%</td><td>145</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen A</td><td>CD27+IgD-</td><td>p99</td><td>0.122%</td><td>145</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen A</td><td>CD27+IgD-</td><td>median_3mad</td><td>0.113%</td><td>145</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen A</td><td>CD27+IgD-</td><td>mean_3sd</td><td>0.140%</td><td>145</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen A</td><td>IgD-</td><td>p95</td><td>0.083%</td><td>145</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen A</td><td>IgD-</td><td>p99</td><td>0.125%</td><td>145</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen A</td><td>IgD-</td><td>median_3mad</td><td>0.080%</td><td>145</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen A</td><td>IgD-</td><td>mean_3sd</td><td>0.119%</td><td>145</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen B</td><td>CD27+IgD-</td><td>p95</td><td>0.089%</td><td>71</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen B</td><td>CD27+IgD-</td><td>p99</td><td>0.113%</td><td>71</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen B</td><td>CD27+IgD-</td><td>median_3mad</td><td>0.094%</td><td>71</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen B</td><td>CD27+IgD-</td><td>mean_3sd</td><td>0.124%</td><td>71</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen B</td><td>CD27+IgD-</td><td>p95</td><td>0.137%</td><td>74</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen B</td><td>CD27+IgD-</td><td>p99</td><td>0.209%</td><td>74</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen B</td><td>CD27+IgD-</td><td>median_3mad</td><td>0.123%</td><td>74</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen B</td><td>CD27+IgD-</td><td>mean_3sd</td><td>0.199%</td><td>74</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen B</td><td>IgD-</td><td>p95</td><td>0.072%</td><td>71</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen B</td><td>IgD-</td><td>p99</td><td>0.082%</td><td>71</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen B</td><td>IgD-</td><td>median_3mad</td><td>0.074%</td><td>71</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen B</td><td>IgD-</td><td>mean_3sd</td><td>0.093%</td><td>71</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen B</td><td>IgD-</td><td>p95</td><td>0.150%</td><td>74</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen B</td><td>IgD-</td><td>p99</td><td>0.186%</td><td>74</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen B</td><td>IgD-</td><td>median_3mad</td><td>0.129%</td><td>74</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen B</td><td>IgD-</td><td>mean_3sd</td><td>0.197%</td><td>74</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen C</td><td>CD27+IgD-</td><td>p95</td><td>0.104%</td><td>71</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen C</td><td>CD27+IgD-</td><td>p99</td><td>0.127%</td><td>71</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen C</td><td>CD27+IgD-</td><td>median_3mad</td><td>0.072%</td><td>71</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen C</td><td>CD27+IgD-</td><td>mean_3sd</td><td>0.137%</td><td>71</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen C</td><td>CD27+IgD-</td><td>p95</td><td>0.130%</td><td>74</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen C</td><td>CD27+IgD-</td><td>p99</td><td>0.148%</td><td>74</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen C</td><td>CD27+IgD-</td><td>median_3mad</td><td>0.161%</td><td>74</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen C</td><td>CD27+IgD-</td><td>mean_3sd</td><td>0.193%</td><td>74</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen C</td><td>IgD-</td><td>p95</td><td>0.092%</td><td>71</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen C</td><td>IgD-</td><td>p99</td><td>0.120%</td><td>71</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen C</td><td>IgD-</td><td>median_3mad</td><td>0.086%</td><td>71</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen C</td><td>IgD-</td><td>mean_3sd</td><td>0.121%</td><td>71</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen C</td><td>IgD-</td><td>p95</td><td>0.123%</td><td>74</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen C</td><td>IgD-</td><td>p99</td><td>0.155%</td><td>74</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen C</td><td>IgD-</td><td>median_3mad</td><td>0.114%</td><td>74</td><td>False</td><td>False</td><td>False</td><td>False</td></tr><tr><td>Antigen C</td><td>IgD-</td><td>mean_3sd</td><td>0.165%</td><td>74</td><td>False</td><td>False</td><td>False</td><td>False</td></tr></tbody></table></div>
+      </details>
+    </section>
+
+    <section class="category-banner" id="cat-quantifiability">
+      <span class="banner-tag">Quantifiability (LLOQ)</span>
+      <h2>Detected below LLOQ vs Quantifiable</h2>
+      <p>A positive result is Quantifiable when it has at least N antigen-specific events. The call depends on N alone; the parent-cell depth X is reported only as a denominator-adequacy diagnostic.</p>
+      <p class="banner-label">Parameters tested</p>
+      <div class="param"><span class="param-name">N (antigen-specific count).</span> <span class="param-def">Minimum background-subtracted antigen-specific events required in the parent subset. Quantifiability depends on N alone.</span><ul class="param-values"><li><strong>3</strong> &mdash; require at least 3 antigen-specific events</li><li><strong>5</strong> &mdash; require at least 5 antigen-specific events</li></ul></div><div class="param"><span class="param-name">f_LLOQ (target lower limit of quantification).</span> <span class="param-def">The lowest antigen-specific frequency the assay aims to quantify. It defines the parent-cell depth X = ceil(N / f_LLOQ) needed to resolve that frequency with N events; X is reported as a denominator-adequacy diagnostic and does not enter the quantifiability decision.</span><ul class="param-values"><li><strong>0.10%</strong> &mdash; parent-count depth X = ceil(N / 0.001)</li><li><strong>0.20%</strong> &mdash; parent-count depth X = ceil(N / 0.002)</li><li><strong>none</strong> &mdash; no parent-count depth required (X not applied)</li></ul></div>
+    </section>
+    <section>
+      <h2>Retention by visit</h2>
+      <ul class="note-list">
+        <li>Bar height is the percent of evaluable results that remain Quantifiable after the count requirement.</li>
+        <li>Each bar is labeled with the raw <strong>retained / evaluable</strong> counts.</li>
+        <li>Panels are arranged by parent subset (rows) and treatment schedule (columns).</li>
+        <li>Within each panel the x-axis is the visit.</li>
+        <li>Bar colour identifies the schedule; the lighter bar = N = 3 and the darker bar = N = 5.</li>
+        <li>Control and missing-visit records are excluded.</li>
+      </ul>
+      <iframe class="plot-frame tall" src="sensitivity_dashboard_assets/retention_visit_threshold_overview.html" title="Retention by visit"></iframe>
+    </section>
+
+    <section class="category-banner" id="cat-frequency">
+      <span class="banner-tag">Endpoint: frequency</span>
+      <h2>Antigen-specific frequency</h2>
+      <p>The background-subtracted antigen-specific frequency (probe % &minus; SA %) of the Quantifiable results, by antigen and parent subset, at the default threshold.</p>
+      <p class="banner-label">Parameters tested</p>
+      <div class="param"><span class="param-name">Parent denominators.</span> <span class="param-def">The antigen-specific frequency is normalized within the parent B-cell subset.</span><ul class="param-values"><li><strong>IgD- B cells</strong> &mdash; IgD-negative memory B cells</li><li><strong>CD27+IgD- B cells</strong> &mdash; class-switched (CD27+ IgD-) memory B cells</li></ul></div>
+    </section>
+    <section id="q-frequency-size">
+      <h2>Frequency distribution (default threshold)</h2>
+      <ul class="note-list">
+        <li><strong>Default threshold:</strong> p95 background cutoff, N &ge; 5 antigen-specific events, f<sub>LLOQ</sub> = 0.10%.</li>
+        <li>One box per antigen &times; subset (Quantifiable results).</li>
+        <li>Box = IQR; line = median; whiskers = 5th&ndash;95th percentile.</li>
+        <li>y-axis: % of parent subset, log scale.</li>
+        <li><strong>Finding:</strong> frequencies cluster near 0.1&ndash;0.2%.</li>
+      </ul>
+      <iframe class="plot-frame medium" src="sensitivity_dashboard_assets/ag_specific_frequency_distribution.html" title="Antigen-specific frequency distribution"></iframe>
+      <details class="audit-table">
+        <summary>Show summary table</summary>
+        <div class="scroll-table"><table class="summary-table"><thead><tr><th class="">subset</th><th class="">antigen</th><th class="">n (Quantifiable)</th><th class="" title="Median background-subtracted antigen-specific frequency (% of the parent subset) among Quantifiable results at the default threshold.">median</th><th class="" title="25th percentile of the antigen-specific frequency (lower edge of the interquartile range).">25th percentile</th><th class="" title="75th percentile (upper edge of the interquartile range).">75th percentile</th><th class="">5th percentile</th><th class="">95th percentile</th></tr></thead><tbody><tr><td>CD27+IgD-</td><td>Antigen A</td><td>88</td><td>0.221%</td><td>0.144%</td><td>0.354%</td><td>0.103%</td><td>0.775%</td></tr><tr><td>CD27+IgD-</td><td>Antigen B</td><td>101</td><td>0.265%</td><td>0.160%</td><td>0.377%</td><td>0.116%</td><td>1.222%</td></tr><tr><td>CD27+IgD-</td><td>Antigen C</td><td>99</td><td>0.245%</td><td>0.158%</td><td>0.353%</td><td>0.088%</td><td>0.791%</td></tr><tr><td>IgD-</td><td>Antigen A</td><td>111</td><td>0.164%</td><td>0.108%</td><td>0.281%</td><td>0.056%</td><td>0.505%</td></tr><tr><td>IgD-</td><td>Antigen B</td><td>118</td><td>0.169%</td><td>0.112%</td><td>0.276%</td><td>0.065%</td><td>0.827%</td></tr><tr><td>IgD-</td><td>Antigen C</td><td>111</td><td>0.165%</td><td>0.113%</td><td>0.279%</td><td>0.063%</td><td>0.577%</td></tr></tbody></table></div>
+      </details>
+    </section>
+    <section id="q-frequency-threshold">
+      <h2>Does the positivity threshold change the Ag-specific frequency?</h2>
+      <ul class="note-list">
+        <li>One group of boxes per antigen; within each, one box per positivity method (N held fixed).</li>
+        <li>The two subset panels share an identical y-axis, so they can be compared directly.</li>
+        <li><strong>Finding:</strong> stricter cutoffs (mean+3&middot;SD, p99) increase the median.</li>
+        <li>N and f<sub>LLOQ</sub> change it negligibly.</li>
+      </ul>
+      <iframe class="plot-frame medium" src="sensitivity_dashboard_assets/frequency_method_sensitivity.html" title="Ag-specific frequency by positivity method"></iframe>
+    </section>
+    <section id="q-frequency-robustness">
+      <h2>Which threshold choice moves the Ag-specific frequency most?</h2>
+      <ul class="note-list">
+        <li>The frequency is recomputed at every combination of the threshold gates (positivity method &times; count N &times; viability) &mdash; 16 settings per cell.</li>
+        <li>Of the spread across the grid, the <strong>positivity cutoff</strong> accounts for 87% (positivity cutoff 87%, count N 10%, viability gate 0%).</li>
+        <li>f<sub>LLOQ</sub> is excluded because it has no effect (quantifiability is count-only).</li>
+        <li>These are robustness ranges over defensible analyst choices, not confidence intervals.</li>
+      </ul>
+      <p class="note">For each antigen &times; subset: the <strong>range</strong> across all 16 settings, the <strong>swing</strong> (how many-fold the answer moves between its lowest and highest setting), and the <strong>most impactful threshold</strong> &mdash; the one knob that explains most of that movement. Sorted most-sensitive first; <strong>sensitive</strong> rows (swing &gt; 3&times;) are shaded.</p>
+      <div class="scroll-table"><table class="summary-table"><thead><tr><th class="">Antigen</th><th class="">Subset</th><th class="" title="robust = swings &lt; 1.5×; moderate = 1.5–3×; sensitive = &gt; 3× across the threshold grid.">Stability</th><th class="" title="Lowest to highest value over the 16-setting grid (1st–99th percentile of positivity method × N × viability), trimming extremes.">Range across thresholds</th><th class="" title="Highest ÷ lowest across the grid (99th ÷ 1st percentile) — the vibration-of-effects ratio (Patel/Ioannidis 2015); how many-fold the answer moves.">Swing (high ÷ low)</th><th class="" title="The single threshold knob explaining most of the across-grid movement (first-order Sobol / variance share), with its share.">Most impactful threshold</th></tr></thead><tbody><tr><td>Antigen A</td><td>IgD-</td><td>robust</td><td>0.149% – 0.200%</td><td>1.3×</td><td>positivity cutoff (94%)</td></tr><tr><td>Antigen C</td><td>IgD-</td><td>robust</td><td>0.152% – 0.193%</td><td>1.3×</td><td>positivity cutoff (95%)</td></tr><tr><td>Antigen C</td><td>CD27+IgD-</td><td>robust</td><td>0.218% – 0.272%</td><td>1.2×</td><td>positivity cutoff (65%)</td></tr><tr><td>Antigen B</td><td>IgD-</td><td>robust</td><td>0.159% – 0.198%</td><td>1.2×</td><td>positivity cutoff (99%)</td></tr><tr><td>Antigen A</td><td>CD27+IgD-</td><td>robust</td><td>0.198% – 0.233%</td><td>1.2×</td><td>count N (46%)</td></tr><tr><td>Antigen B</td><td>CD27+IgD-</td><td>robust</td><td>0.251% – 0.290%</td><td>1.2×</td><td>positivity cutoff (82%)</td></tr></tbody></table></div>
+    </section>
+
+    <section class="category-banner" id="cat-foldchange">
+      <span class="banner-tag">Endpoint: fold change</span>
+      <h2>Fold change (baseline to peak)</h2>
+      <p>Visit-to-visit ratio of the background-subtracted frequency. The schedule sets the baseline and peak visits (shown next).</p>
+      <p class="banner-label">Parameters tested</p>
+      <div class="param"><span class="param-name">Fold-change comparisons.</span> <span class="param-def">Visit-to-visit ratio of the background-subtracted frequency; the treatment schedule sets the baseline and peak visits.</span><ul class="param-values"><li><strong>Simultaneous &amp; Treatment-1-first</strong> &mdash; single baseline: V2 / V1 (Treatment 1 given at V1, peak at V2)</li><li><strong>Treatment-2-first — Day 0 baseline</strong> &mdash; V3 / V1 (Treatment-1-naive Day 0 vs the V3 peak)</li><li><strong>Treatment-2-first — Treatment-1 dose day baseline</strong> &mdash; V3 / V2 (Treatment-1 dose day vs the V3 peak; Treatment 1 given at V2)</li><li><strong>Baseline floor</strong> &mdash; a V1 or V4 baseline below the count trigger is set to 0.02% (imputed)</li></ul></div>
+    </section>
+    <section>
+      <h2>Schedule and visits</h2>
+      <ul class="note-list">
+        <li>Green star = Treatment-1 dose; gray = PBMC draw; arrows = baseline&rarr;peak comparison.</li>
+        <li>Visits: V1 = Day 0, V2 = Day 28, V3 = Day 56, V4 = Day 180.</li>
+        <li>Treatment-2-first gets Treatment 1 at V2 &rarr; two baselines: Day 0 (V1) and Treatment-1 dose day (V2), both vs the V3 peak.</li>
+      </ul>
+      <iframe class="plot-frame medium" src="sensitivity_dashboard_assets/schedule_visit_schematic.html" title="Treatment schedule and visits"></iframe>
+    </section>
+    <section id="q-covid-baseline">
+      <h2>Treatment-2-first: which baseline?</h2>
+      <p class="sub-head">First: how many baselines need imputing?</p>
+      <ul class="note-list">
+        <li>The Day 0 (V1) sample is pre-Treatment-1, so many subjects have a near-zero baseline.</li>
+        <li>A near-zero baseline falls below the count trigger and must be imputed (set to the 0.02% floor).</li>
+        <li>The Treatment-1 dose day (V2) sample is post-Treatment-1 and is always measurable.</li>
+        <li><strong>Findings</strong>
+          <ul>
+            <li>The Day 0 baseline imputes many baselines.</li>
+            <li>The Treatment-1 dose day baseline imputes none, so it is the more defensible baseline.</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="scroll-table"><table class="summary-table"><thead><tr><th class="">Parent subset</th><th class="">Antigen</th><th class="" title="Number of Day-0 (V3/V1) baselines floored to 0.02% because the Day-0 sample is below the count trigger (Treatment-1-naive subjects).">Day 0 (V3/V1) imputed</th><th class="" title="Number of Treatment-1-dose-day (V3/V2) baselines floored to 0.02% (none -- the Treatment-1-dose-day sample is always measurable).">Treatment-1 dose day (V3/V2) imputed</th></tr></thead><tbody><tr><td>IgD-</td><td>Antigen A</td><td>1</td><td>0</td></tr><tr><td>IgD-</td><td>Antigen B</td><td>0</td><td>0</td></tr><tr><td>IgD-</td><td>Antigen C</td><td>2</td><td>0</td></tr><tr><td>CD27+IgD-</td><td>Antigen A</td><td>1</td><td>0</td></tr><tr><td>CD27+IgD-</td><td>Antigen B</td><td>2</td><td>0</td></tr><tr><td>CD27+IgD-</td><td>Antigen C</td><td>2</td><td>0</td></tr><tr class="highlight-row"><td>All</td><td>All antigens</td><td>8</td><td>0</td></tr></tbody></table></div>
+      <p class="sub-head">Then: how the imputation changes the fold change</p>
+      <ul class="note-list">
+        <li>Three handlings of the baseline are shown per antigen:
+          <ul>
+            <li><strong>Day 0, near-zero baselines imputed</strong> &mdash; kept at the 0.02% floor.</li>
+            <li><strong>Day 0, near-zero baselines excluded</strong> &mdash; those subjects removed.</li>
+            <li><strong>Treatment-1 dose day</strong> &mdash; no imputation needed.</li>
+          </ul>
+        </li>
+        <li>Box = IQR, line = median, whiskers = 5th&ndash;95th percentile.</li>
+        <li>The dotted line marks 1&times; (no change).</li>
+        <li><strong>Findings</strong>
+          <ul>
+            <li>Imputed divides the peak by the 0.02% floor, giving very large, inflated ratios.</li>
+            <li>Excluded keeps only subjects with a measurable Day-0 baseline (Treatment-1-experienced), giving a biased, modest ratio.</li>
+            <li>Either way Day 0 is problematic; the Treatment-1 dose day baseline avoids the choice.</li>
+          </ul>
+        </li>
+      </ul>
+      <iframe class="plot-frame medium" src="sensitivity_dashboard_assets/covid_baseline_choice.html" title="Treatment-2-first baseline choice"></iframe>
+    </section>
+    <section id="q-foldchange-positivity">
+      <h2>Does the positivity threshold change the fold change?</h2>
+      <ul class="note-list">
+        <li>Median observed fold change under each positivity method, one panel per schedule (N and f<sub>LLOQ</sub> held at the default).</li>
+        <li><strong>Finding:</strong> a stricter positivity cutoff raises the fold change modestly.</li>
+      </ul>
+      <iframe class="plot-frame short" src="sensitivity_dashboard_assets/fold_change_positivity_sensitivity.html" title="Fold change vs positivity threshold"></iframe>
+    </section>
+    <section id="q-foldchange-count">
+      <h2>Does the quantifiability threshold (N) change the fold change?</h2>
+      <ul class="note-list">
+        <li>Median observed fold change at N = 3 vs N = 5, one panel per schedule (positivity method and f<sub>LLOQ</sub> held at the default).</li>
+        <li><strong>Finding:</strong> requiring 3 vs 5 antigen-specific cells barely changes the fold change.</li>
+      </ul>
+      <iframe class="plot-frame short" src="sensitivity_dashboard_assets/fold_change_count_sensitivity.html" title="Fold change vs quantifiability threshold"></iframe>
+    </section>
+    <section id="q-foldchange-robustness">
+      <h2>Which threshold choice moves the fold change most?</h2>
+      <ul class="note-list">
+        <li>The fold change is recomputed at every combination of the threshold gates (positivity method &times; count N &times; viability) &mdash; 16 settings per cell.</li>
+        <li>Of the spread across the grid, the <strong>positivity cutoff</strong> accounts for 90% (positivity cutoff 90%, count N 9%, viability gate 0%).</li>
+        <li>f<sub>LLOQ</sub> is excluded because it has no effect (quantifiability is count-only).</li>
+        <li>These are robustness ranges over defensible analyst choices, not confidence intervals.</li>
+      </ul>
+      <p class="note">For each schedule &times; antigen &times; subset: the <strong>range</strong> across all 16 settings, the <strong>swing</strong> (how many-fold the answer moves between its lowest and highest setting), and the <strong>most impactful threshold</strong> &mdash; the one knob that explains most of that movement. Sorted most-sensitive first; <strong>sensitive</strong> rows (swing &gt; 3&times;) are shaded.</p>
+      <div class="scroll-table"><table class="summary-table"><thead><tr><th class="">Schedule</th><th class="">Antigen</th><th class="">Subset</th><th class="" title="robust = swings &lt; 1.5×; moderate = 1.5–3×; sensitive = &gt; 3× across the threshold grid.">Stability</th><th class="" title="Lowest to highest value over the 16-setting grid (1st–99th percentile of positivity method × N × viability), trimming extremes.">Range across thresholds</th><th class="" title="Highest ÷ lowest across the grid (99th ÷ 1st percentile) — the vibration-of-effects ratio (Patel/Ioannidis 2015); how many-fold the answer moves.">Swing (high ÷ low)</th><th class="" title="The single threshold knob explaining most of the across-grid movement (first-order Sobol / variance share), with its share.">Most impactful threshold</th></tr></thead><tbody><tr><td>Simultaneous (V2/V1)</td><td>Antigen A</td><td>IgD-</td><td>moderate</td><td>1.64× – 4.24×</td><td>2.6×</td><td>positivity cutoff (96%)</td></tr><tr><td>Treatment-2-first: vs Treatment-1 dose (V3/V2)</td><td>Antigen C</td><td>IgD-</td><td>moderate</td><td>1.70× – 2.94×</td><td>1.7×</td><td>positivity cutoff (53%)</td></tr><tr><td>Simultaneous (V2/V1)</td><td>Antigen C</td><td>CD27+IgD-</td><td>moderate</td><td>1.97× – 2.98×</td><td>1.5×</td><td>positivity cutoff (100%)</td></tr><tr><td>Treatment-2-first: vs Treatment-1 dose (V3/V2)</td><td>Antigen A</td><td>CD27+IgD-</td><td>robust</td><td>2.47× – 3.49×</td><td>1.4×</td><td>positivity cutoff (100%)</td></tr><tr><td>Simultaneous (V2/V1)</td><td>Antigen B</td><td>CD27+IgD-</td><td>robust</td><td>2.45× – 3.44×</td><td>1.4×</td><td>positivity cutoff (100%)</td></tr><tr><td>Treatment-2-first: vs Treatment-1 dose (V3/V2)</td><td>Antigen A</td><td>IgD-</td><td>robust</td><td>2.54× – 3.36×</td><td>1.3×</td><td>positivity cutoff (100%)</td></tr><tr><td>Treatment 1 first (V2/V1)</td><td>Antigen B</td><td>IgD-</td><td>robust</td><td>2.65× – 3.38×</td><td>1.3×</td><td>positivity cutoff (100%)</td></tr><tr><td>Treatment 1 first (V2/V1)</td><td>Antigen A</td><td>IgD-</td><td>robust</td><td>2.18× – 2.76×</td><td>1.3×</td><td>positivity cutoff (100%)</td></tr><tr><td>Treatment-2-first: vs Treatment-1 dose (V3/V2)</td><td>Antigen B</td><td>CD27+IgD-</td><td>robust</td><td>1.84× – 2.24×</td><td>1.2×</td><td>count N (100%)</td></tr><tr><td>Simultaneous (V2/V1)</td><td>Antigen A</td><td>CD27+IgD-</td><td>robust</td><td>2.42× – 2.95×</td><td>1.2×</td><td>positivity cutoff (100%)</td></tr><tr><td>Treatment 1 first (V2/V1)</td><td>Antigen C</td><td>CD27+IgD-</td><td>robust</td><td>2.51× – 3.02×</td><td>1.2×</td><td>positivity cutoff (100%)</td></tr><tr><td>Treatment 1 first (V2/V1)</td><td>Antigen C</td><td>IgD-</td><td>robust</td><td>1.98× – 2.26×</td><td>1.1×</td><td>positivity cutoff (100%)</td></tr><tr><td>Simultaneous (V2/V1)</td><td>Antigen B</td><td>IgD-</td><td>robust</td><td>2.04× – 2.23×</td><td>1.1×</td><td>positivity cutoff (100%)</td></tr><tr><td>Treatment 1 first (V2/V1)</td><td>Antigen B</td><td>CD27+IgD-</td><td>robust</td><td>1.65× – 1.80×</td><td>1.1×</td><td>positivity cutoff (100%)</td></tr><tr><td>Treatment-2-first: vs Treatment-1 dose (V3/V2)</td><td>Antigen B</td><td>IgD-</td><td>robust</td><td>2.97× – 3.23×</td><td>1.1×</td><td>count N (100%)</td></tr><tr><td>Treatment-2-first: vs Treatment-1 dose (V3/V2)</td><td>Antigen C</td><td>CD27+IgD-</td><td>robust</td><td>2.06× – 2.23×</td><td>1.1×</td><td>count N (80%)</td></tr><tr><td>Simultaneous (V2/V1)</td><td>Antigen C</td><td>IgD-</td><td>robust</td><td>2.09× – 2.15×</td><td>1.0×</td><td>positivity cutoff (100%)</td></tr><tr><td>Treatment 1 first (V2/V1)</td><td>Antigen A</td><td>CD27+IgD-</td><td>robust</td><td>3.39× – 3.39×</td><td>1.0×</td><td>—</td></tr></tbody></table></div>
+    </section>
+    <section id="q-foldchange-size">
+      <h2>Fold-change end result (recommended settings)</h2>
+      <p>This is the final fold-change result, computed with the recommended value or handling at every gate.</p>
+      <p class="sub-head">Recommended settings used at each gate</p>
+      <ul class="note-list">
+        <li>Viability gate: &ge; 75% live cells (recommended); the &ge; 70% level is shown alongside it as a second colour.</li>
+        <li>Positivity cutoff: p95 &mdash; the 95th percentile of the SA-only controls.</li>
+        <li>Quantifiable count: N &ge; 5 antigen-specific events.</li>
+        <li>f<sub>LLOQ</sub>: 0.10%.</li>
+        <li>Treatment-2-first baseline: Treatment-1 dose day (V3/V2) &mdash; the recommended baseline, which needs no imputation.</li>
+      </ul>
+      <p class="sub-head">How to read it</p>
+      <ul class="note-list">
+        <li>Each panel is one antigen &times; parent subset.</li>
+        <li>The x-axis is the treatment schedule (schedules are not pooled).</li>
+        <li>The two box colours are the two viability-inclusion levels:
+          <ul>
+            <li><strong>&ge; 75%</strong> (recommended) &mdash; clean QC pass only.</li>
+            <li><strong>&ge; 70% + review-required</strong> &mdash; also admits samples flagged for review, namely:
+              <ul>
+                <li>Borderline viability (70&ndash;75% live cells).</li>
+                <li>Possible duplicate sample.</li>
+                <li>Inconsistent visit assignment.</li>
+                <li>Missing treatment group or treatment record.</li>
+                <li>Missing V1 (baseline) sample.</li>
+                <li>IgD-subset-tail source-exclusion flag.</li>
+                <li>Antigen-specific source-exclusion flag (Antigen A, Antigen B, or Antigen C).</li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li>Box = IQR, line = median, whiskers = 5th&ndash;95th percentile.</li>
+        <li>The dotted line marks 1&times; (above = increase, below = decrease).</li>
+        <li><strong>Findings</strong>
+          <ul>
+            <li>A consistent ~2&ndash;3&times; rise at the peak visit across antigens and schedules.</li>
+            <li>The result is essentially unchanged between the &ge; 75% and &ge; 70% levels.</li>
+          </ul>
+        </li>
+      </ul>
+      <iframe class="plot-frame xtall" src="sensitivity_dashboard_assets/fold_change_distribution.html" title="Fold-change end result"></iframe>
+      <details class="audit-table">
+        <summary>Show summary table (observed vs with-floored)</summary>
+        <div class="scroll-table"><table class="summary-table"><thead><tr><th class="">comparison_name</th><th class="">condition</th><th class="">antigen</th><th class="">subset</th><th class="" title="Computed fold-change pairs excluding baselines floored to 0.02%.">n_observed_computed_pairs</th><th class="" title="Pairs whose baseline was imputed at the 0.02% floor.">n_floored_pairs</th><th class="" title="Median followup/baseline ratio (background-subtracted RESULT %) over OBSERVED pairs only -- imputed baselines excluded.">median_fold_change_observed</th><th class="" title="Same median but INCLUDING the floored (0.02%-imputed) baselines; larger than observed wherever V1/V4 baselines were floored.">median_fold_change_with_floored</th><th class="" title="5th percentile of the observed-pair fold change.">p05_fold_change_observed</th><th class="" title="95th percentile of the observed-pair fold change.">p95_fold_change_observed</th><th class="" title="Observed pairs with fold change &gt; 1.">n_increase_observed</th><th class="" title="Observed pairs with fold change &lt; 1.">n_decrease_observed</th></tr></thead><tbody><tr><td>V2_vs_V1</td><td>Simultaneous</td><td>A</td><td>CD27+IgD-</td><td>4</td><td>2</td><td>2.42</td><td>4.88</td><td>0.99</td><td>6.23</td><td>3</td><td>1</td></tr><tr><td>V2_vs_V1</td><td>Treatment 1 first</td><td>A</td><td>CD27+IgD-</td><td>8</td><td>1</td><td>3.39</td><td>3.65</td><td>0.62</td><td>7.34</td><td>6</td><td>2</td></tr><tr><td>V3_vs_V1</td><td>Treatment 2 first</td><td>A</td><td>CD27+IgD-</td><td>6</td><td>1</td><td>4.46</td><td>4.64</td><td>1.05</td><td>5.89</td><td>5</td><td>1</td></tr><tr><td>V3_vs_V2</td><td>Treatment 2 first</td><td>A</td><td>CD27+IgD-</td><td>8</td><td>0</td><td>2.47</td><td>2.47</td><td>0.56</td><td>7.85</td><td>5</td><td>3</td></tr><tr><td>V2_vs_V1</td><td>Simultaneous</td><td>B</td><td>CD27+IgD-</td><td>6</td><td>3</td><td>2.45</td><td>4.24</td><td>0.74</td><td>4.60</td><td>5</td><td>1</td></tr><tr><td>V2_vs_V1</td><td>Treatment 1 first</td><td>B</td><td>CD27+IgD-</td><td>8</td><td>4</td><td>1.65</td><td>2.29</td><td>0.86</td><td>3.12</td><td>7</td><td>1</td></tr><tr><td>V3_vs_V1</td><td>Treatment 2 first</td><td>B</td><td>CD27+IgD-</td><td>5</td><td>2</td><td>3.47</td><td>6.53</td><td>1.56</td><td>12.05</td><td>5</td><td>0</td></tr><tr><td>V3_vs_V2</td><td>Treatment 2 first</td><td>B</td><td>CD27+IgD-</td><td>5</td><td>0</td><td>1.84</td><td>1.84</td><td>1.29</td><td>9.05</td><td>5</td><td>0</td></tr><tr><td>V2_vs_V1</td><td>Simultaneous</td><td>C</td><td>CD27+IgD-</td><td>7</td><td>2</td><td>1.97</td><td>2.98</td><td>0.34</td><td>7.08</td><td>5</td><td>2</td></tr><tr><td>V2_vs_V1</td><td>Treatment 1 first</td><td>C</td><td>CD27+IgD-</td><td>7</td><td>2</td><td>2.51</td><td>3.02</td><td>1.00</td><td>6.60</td><td>6</td><td>1</td></tr><tr><td>V3_vs_V1</td><td>Treatment 2 first</td><td>C</td><td>CD27+IgD-</td><td>6</td><td>2</td><td>2.43</td><td>4.01</td><td>1.48</td><td>6.38</td><td>6</td><td>0</td></tr><tr><td>V3_vs_V2</td><td>Treatment 2 first</td><td>C</td><td>CD27+IgD-</td><td>7</td><td>0</td><td>2.23</td><td>2.23</td><td>1.10</td><td>5.69</td><td>6</td><td>1</td></tr><tr><td>V2_vs_V1</td><td>Simultaneous</td><td>A</td><td>IgD-</td><td>6</td><td>2</td><td>2.09</td><td>2.68</td><td>0.32</td><td>7.29</td><td>4</td><td>2</td></tr><tr><td>V2_vs_V1</td><td>Treatment 1 first</td><td>A</td><td>IgD-</td><td>9</td><td>0</td><td>2.18</td><td>2.18</td><td>0.67</td><td>5.00</td><td>8</td><td>1</td></tr><tr><td>V3_vs_V1</td><td>Treatment 2 first</td><td>A</td><td>IgD-</td><td>7</td><td>1</td><td>3.43</td><td>3.13</td><td>1.14</td><td>9.91</td><td>7</td><td>0</td></tr><tr><td>V3_vs_V2</td><td>Treatment 2 first</td><td>A</td><td>IgD-</td><td>10</td><td>0</td><td>2.55</td><td>2.55</td><td>0.39</td><td>8.39</td><td>7</td><td>3</td></tr><tr><td>V2_vs_V1</td><td>Simultaneous</td><td>B</td><td>IgD-</td><td>9</td><td>0</td><td>2.04</td><td>2.04</td><td>0.67</td><td>5.18</td><td>8</td><td>1</td></tr><tr><td>V2_vs_V1</td><td>Treatment 1 first</td><td>B</td><td>IgD-</td><td>10</td><td>1</td><td>2.84</td><td>3.38</td><td>1.18</td><td>7.11</td><td>10</td><td>0</td></tr><tr><td>V3_vs_V1</td><td>Treatment 2 first</td><td>B</td><td>IgD-</td><td>8</td><td>0</td><td>2.72</td><td>2.72</td><td>0.83</td><td>8.72</td><td>7</td><td>1</td></tr><tr><td>V3_vs_V2</td><td>Treatment 2 first</td><td>B</td><td>IgD-</td><td>8</td><td>0</td><td>3.23</td><td>3.23</td><td>1.60</td><td>9.45</td><td>8</td><td>0</td></tr><tr><td>V2_vs_V1</td><td>Simultaneous</td><td>C</td><td>IgD-</td><td>7</td><td>1</td><td>2.15</td><td>3.11</td><td>1.51</td><td>6.34</td><td>7</td><td>0</td></tr><tr><td>V2_vs_V1</td><td>Treatment 1 first</td><td>C</td><td>IgD-</td><td>10</td><td>1</td><td>1.98</td><td>2.15</td><td>0.56</td><td>5.72</td><td>8</td><td>2</td></tr><tr><td>V3_vs_V1</td><td>Treatment 2 first</td><td>C</td><td>IgD-</td><td>6</td><td>2</td><td>2.63</td><td>3.84</td><td>1.04</td><td>7.94</td><td>5</td><td>1</td></tr><tr><td>V3_vs_V2</td><td>Treatment 2 first</td><td>C</td><td>IgD-</td><td>8</td><td>0</td><td>2.28</td><td>2.28</td><td>0.59</td><td>8.62</td><td>7</td><td>1</td></tr></tbody></table></div>
+      </details>
+    </section>
+
+    <section id="q-foldchange-explorer">
+      <h2>Explore your own thresholds</h2>
+      <ul class="note-list">
+        <li>Pick a positivity cutoff and a Treatment-2-first baseline; the figure redraws for your choice.</li>
+        <li>These are the two gates that actually move the fold change.</li>
+        <li>N, f<sub>LLOQ</sub> and the viability gate are held at the recommended values because they change the fold change negligibly.</li>
+        <li>Box = IQR, line = median, whiskers = 5th&ndash;95th percentile; dotted line = 1&times;.</li>
+      </ul>
+      <iframe class="plot-frame xxtall" src="sensitivity_dashboard_assets/fold_change_explorer.html" title="Interactive fold-change threshold explorer"></iframe>
+    </section>
+  </main>
+</body>
+</html>

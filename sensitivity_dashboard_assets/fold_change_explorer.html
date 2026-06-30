@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="plotly.min.js"></script>
+  <style>
+    html, body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #16202a; }
+    #controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 18px; padding: 10px 14px; border-bottom: 1px solid #d6dde5; background: #f7f9fb; }
+    .ctl { display: flex; flex-direction: column; font-size: 12px; color: #566273; }
+    .ctl span { margin-bottom: 2px; font-weight: 600; }
+    .ctl select { font-size: 13px; padding: 3px 5px; border: 1px solid #c3ccd6; border-radius: 4px; background: #fff; }
+    #explorer-plot { width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <label class="ctl"><span>Positivity cutoff method</span><select id="g_method"></select></label>
+    <label class="ctl"><span>Treatment-2-first baseline</span><select id="g_covid_baseline"></select></label>
+  </div>
+  <div id="explorer-plot"></div>
+  <script>
+    const DATA = {"options": {"method": [["p95", "p95"], ["median_3mad", "median+3\u00b7MAD"], ["mean_3sd", "mean+3\u00b7SD"], ["p99", "p99"]], "covid_baseline": [["fludose", "Treatment-1 dose day (V3/V2) - recommended"], ["day0_excluded", "Day 0, near-zero baselines excluded (V3/V1)"], ["day0_imputed", "Day 0, near-zero baselines imputed (V3/V1)"]]}, "defaults": {"method": "p95", "covid_baseline": "fludose"}, "antigens": ["A", "B", "C"], "antigen_labels": {"A": "Antigen A", "B": "Antigen B", "C": "Antigen C"}, "antigen_colors": {"A": "#08519c", "B": "#3182bd", "C": "#6baed6"}, "subsets": ["IgD-", "CD27+IgD-"], "stats": {"p95|sim|A|IgD-": {"p05": 0.3233, "q1": 0.8532, "median": 2.0904, "q3": 5.0826, "p95": 7.2878, "n": 6}, "p95|sim|A|CD27+IgD-": {"p05": 0.9872, "q1": 1.6201, "median": 2.4163, "q3": 3.9141, "p95": 6.231, "n": 4}, "p95|sim|B|IgD-": {"p05": 0.6728, "q1": 1.1387, "median": 2.0393, "q3": 2.4184, "p95": 5.1806, "n": 9}, "p95|sim|B|CD27+IgD-": {"p05": 0.7392, "q1": 1.6239, "median": 2.4451, "q3": 3.8408, "p95": 4.6037, "n": 6}, "p95|sim|C|IgD-": {"p05": 1.5076, "q1": 1.8176, "median": 2.1477, "q3": 4.0853, "p95": 6.338, "n": 7}, "p95|sim|C|CD27+IgD-": {"p05": 0.3376, "q1": 1.1975, "median": 1.9737, "q3": 4.5765, "p95": 7.0768, "n": 7}, "p95|flu|A|IgD-": {"p05": 0.665, "q1": 1.332, "median": 2.1787, "q3": 3.8055, "p95": 4.9991, "n": 9}, "p95|flu|A|CD27+IgD-": {"p05": 0.6169, "q1": 2.4548, "median": 3.3884, "q3": 3.7947, "p95": 7.3401, "n": 8}, "p95|flu|B|IgD-": {"p05": 1.1773, "q1": 1.6688, "median": 2.8369, "q3": 6.1867, "p95": 7.1137, "n": 10}, "p95|flu|B|CD27+IgD-": {"p05": 0.8617, "q1": 1.3069, "median": 1.6485, "q3": 2.1971, "p95": 3.1157, "n": 8}, "p95|flu|C|IgD-": {"p05": 0.5604, "q1": 1.2531, "median": 1.9797, "q3": 2.6031, "p95": 5.7184, "n": 10}, "p95|flu|C|CD27+IgD-": {"p05": 0.9979, "q1": 2.1155, "median": 2.5136, "q3": 3.9363, "p95": 6.6037, "n": 7}, "p95|fludose|A|IgD-": {"p05": 0.39, "q1": 1.2126, "median": 2.5511, "q3": 4.1586, "p95": 8.3943, "n": 10}, "p95|fludose|A|CD27+IgD-": {"p05": 0.5589, "q1": 0.6942, "median": 2.4711, "q3": 6.1323, "p95": 7.8545, "n": 8}, "p95|fludose|B|IgD-": {"p05": 1.5976, "q1": 1.8967, "median": 3.2314, "q3": 6.6562, "p95": 9.45, "n": 8}, "p95|fludose|B|CD27+IgD-": {"p05": 1.2934, "q1": 1.7869, "median": 1.8387, "q3": 2.8214, "p95": 9.052, "n": 5}, "p95|fludose|C|IgD-": {"p05": 0.5934, "q1": 1.2679, "median": 2.2806, "q3": 5.437, "p95": 8.6184, "n": 8}, "p95|fludose|C|CD27+IgD-": {"p05": 1.1001, "q1": 1.5861, "median": 2.2292, "q3": 4.4637, "p95": 5.6912, "n": 7}, "p95|day0_excluded|A|IgD-": {"p05": 1.1362, "q1": 2.1344, "median": 3.4303, "q3": 7.4773, "p95": 9.9116, "n": 7}, "p95|day0_excluded|A|CD27+IgD-": {"p05": 1.0488, "q1": 3.2423, "median": 4.4604, "q3": 4.7319, "p95": 5.886, "n": 6}, "p95|day0_excluded|B|IgD-": {"p05": 0.8339, "q1": 1.7022, "median": 2.724, "q3": 4.6927, "p95": 8.7158, "n": 8}, "p95|day0_excluded|B|CD27+IgD-": {"p05": 1.5617, "q1": 3.2955, "median": 3.4662, "q3": 6.5257, "p95": 12.0526, "n": 5}, "p95|day0_excluded|C|IgD-": {"p05": 1.0381, "q1": 1.5517, "median": 2.6259, "q3": 3.9693, "p95": 7.9397, "n": 6}, "p95|day0_excluded|C|CD27+IgD-": {"p05": 1.4811, "q1": 1.8727, "median": 2.4325, "q3": 4.7157, "p95": 6.3818, "n": 6}, "p95|day0_imputed|A|IgD-": {"p05": 1.1583, "q1": 1.535, "median": 3.127, "q3": 6.5472, "p95": 9.8706, "n": 8}, "p95|day0_imputed|A|CD27+IgD-": {"p05": 1.1719, "q1": 3.5898, "median": 4.636, "q3": 5.0344, "p95": 5.9735, "n": 7}, "p95|day0_imputed|B|IgD-": {"p05": 0.8339, "q1": 1.7022, "median": 2.724, "q3": 4.6927, "p95": 8.7158, "n": 8}, "p95|day0_imputed|B|CD27+IgD-": {"p05": 1.7784, "q1": 3.3809, "median": 6.5257, "q3": 10.7071, "p95": 17.2288, "n": 7}, "p95|day0_imputed|C|IgD-": {"p05": 1.1008, "q1": 1.6378, "median": 3.8366, "q3": 4.9337, "p95": 8.2427, "n": 8}, "p95|day0_imputed|C|CD27+IgD-": {"p05": 1.5157, "q1": 2.1365, "median": 4.0093, "q3": 6.1379, "p95": 10.3048, "n": 8}, "median_3mad|sim|A|IgD-": {"p05": 0.3233, "q1": 0.8532, "median": 2.0904, "q3": 5.0826, "p95": 7.2878, "n": 6}, "median_3mad|sim|A|CD27+IgD-": {"p05": 0.9872, "q1": 1.6201, "median": 2.4163, "q3": 3.9141, "p95": 6.231, "n": 4}, "median_3mad|sim|B|IgD-": {"p05": 0.7069, "q1": 1.1761, "median": 2.1355, "q3": 2.5481, "p95": 5.0195, "n": 10}, "median_3mad|sim|B|CD27+IgD-": {"p05": 0.7392, "q1": 1.6239, "median": 2.4451, "q3": 3.8408, "p95": 4.6037, "n": 6}, "median_3mad|sim|C|IgD-": {"p05": 0.9495, "q1": 1.5656, "median": 2.0925, "q3": 4.0762, "p95": 6.1784, "n": 8}, "median_3mad|sim|C|CD27+IgD-": {"p05": 0.6458, "q1": 1.8767, "median": 2.4771, "q3": 5.3745, "p95": 7.1414, "n": 6}, "median_3mad|flu|A|IgD-": {"p05": 0.665, "q1": 1.332, "median": 2.1787, "q3": 3.8055, "p95": 4.9991, "n": 9}, "median_3mad|flu|A|CD27+IgD-": {"p05": 0.6169, "q1": 2.4548, "median": 3.3884, "q3": 3.7947, "p95": 7.3401, "n": 8}, "median_3mad|flu|B|IgD-": {"p05": 1.193, "q1": 1.6962, "median": 2.6461, "q3": 6.1416, "p95": 7.0344, "n": 11}, "median_3mad|flu|B|CD27+IgD-": {"p05": 0.8617, "q1": 1.3069, "median": 1.6485, "q3": 2.1971, "p95": 3.1157, "n": 8}, "median_3mad|flu|C|IgD-": {"p05": 0.5604, "q1": 1.2531, "median": 1.9797, "q3": 2.6031, "p95": 5.7184, "n": 10}, "median_3mad|flu|C|CD27+IgD-": {"p05": 2.0941, "q1": 2.1513, "median": 3.0177, "q3": 4.8548, "p95": 6.8536, "n": 5}, "median_3mad|fludose|A|IgD-": {"p05": 0.39, "q1": 1.2126, "median": 2.5511, "q3": 4.1586, "p95": 8.3943, "n": 10}, "median_3mad|fludose|A|CD27+IgD-": {"p05": 0.5589, "q1": 0.6942, "median": 2.4711, "q3": 6.1323, "p95": 7.8545, "n": 8}, "median_3mad|fludose|B|IgD-": {"p05": 1.5976, "q1": 1.8967, "median": 3.2314, "q3": 6.6562, "p95": 9.45, "n": 8}, "median_3mad|fludose|B|CD27+IgD-": {"p05": 1.2934, "q1": 1.7869, "median": 1.8387, "q3": 2.8214, "p95": 9.052, "n": 5}, "median_3mad|fludose|C|IgD-": {"p05": 0.5934, "q1": 1.2679, "median": 2.2806, "q3": 5.437, "p95": 8.6184, "n": 8}, "median_3mad|fludose|C|CD27+IgD-": {"p05": 1.1001, "q1": 1.5861, "median": 2.2292, "q3": 4.4637, "p95": 5.6912, "n": 7}, "median_3mad|day0_excluded|A|IgD-": {"p05": 1.1362, "q1": 2.1344, "median": 3.4303, "q3": 7.4773, "p95": 9.9116, "n": 7}, "median_3mad|day0_excluded|A|CD27+IgD-": {"p05": 1.0488, "q1": 3.2423, "median": 4.4604, "q3": 4.7319, "p95": 5.886, "n": 6}, "median_3mad|day0_excluded|B|IgD-": {"p05": 0.8339, "q1": 1.7022, "median": 2.724, "q3": 4.6927, "p95": 8.7158, "n": 8}, "median_3mad|day0_excluded|B|CD27+IgD-": {"p05": 1.5617, "q1": 3.2955, "median": 3.4662, "q3": 6.5257, "p95": 12.0526, "n": 5}, "median_3mad|day0_excluded|C|IgD-": {"p05": 1.0381, "q1": 1.5517, "median": 2.6259, "q3": 3.9693, "p95": 7.9397, "n": 6}, "median_3mad|day0_excluded|C|CD27+IgD-": {"p05": 1.4811, "q1": 1.8727, "median": 2.4325, "q3": 4.7157, "p95": 6.3818, "n": 6}, "median_3mad|day0_imputed|A|IgD-": {"p05": 1.1583, "q1": 1.535, "median": 3.127, "q3": 6.5472, "p95": 9.8706, "n": 8}, "median_3mad|day0_imputed|A|CD27+IgD-": {"p05": 1.1719, "q1": 3.5898, "median": 4.636, "q3": 5.0344, "p95": 5.9735, "n": 7}, "median_3mad|day0_imputed|B|IgD-": {"p05": 0.8339, "q1": 1.7022, "median": 2.724, "q3": 4.6927, "p95": 8.7158, "n": 8}, "median_3mad|day0_imputed|B|CD27+IgD-": {"p05": 1.7784, "q1": 3.3809, "median": 6.5257, "q3": 10.7071, "p95": 17.2288, "n": 7}, "median_3mad|day0_imputed|C|IgD-": {"p05": 1.1008, "q1": 1.6378, "median": 3.8366, "q3": 4.9337, "p95": 8.2427, "n": 8}, "median_3mad|day0_imputed|C|CD27+IgD-": {"p05": 1.5157, "q1": 2.1365, "median": 4.0093, "q3": 6.1379, "p95": 10.3048, "n": 8}, "mean_3sd|sim|A|IgD-": {"p05": 1.7717, "q1": 2.318, "median": 4.2369, "q3": 6.3814, "p95": 7.4691, "n": 4}, "mean_3sd|sim|A|CD27+IgD-": {"p05": 1.9903, "q1": 2.4163, "median": 2.9487, "q3": 4.8795, "p95": 6.4241, "n": 3}, "mean_3sd|sim|B|IgD-": {"p05": 1.1836, "q1": 1.6639, "median": 2.2317, "q3": 2.8329, "p95": 5.5027, "n": 7}, "mean_3sd|sim|B|CD27+IgD-": {"p05": 2.3006, "q1": 2.5483, "median": 3.4443, "q3": 4.3594, "p95": 4.6526, "n": 4}, "mean_3sd|sim|C|IgD-": {"p05": 1.5076, "q1": 1.8176, "median": 2.1477, "q3": 4.0853, "p95": 6.338, "n": 7}, "mean_3sd|sim|C|CD27+IgD-": {"p05": 1.8702, "q1": 1.9737, "median": 2.9805, "q3": 6.1725, "p95": 7.206, "n": 5}, "mean_3sd|flu|A|IgD-": {"p05": 1.2935, "q1": 1.5581, "median": 2.7639, "q3": 3.9377, "p95": 5.0545, "n": 8}, "mean_3sd|flu|A|CD27+IgD-": {"p05": 0.6169, "q1": 2.4548, "median": 3.3884, "q3": 3.7947, "p95": 7.3401, "n": 8}, "mean_3sd|flu|B|IgD-": {"p05": 1.4666, "q1": 1.7511, "median": 3.382, "q3": 6.2319, "p95": 7.1929, "n": 9}, "mean_3sd|flu|B|CD27+IgD-": {"p05": 1.2889, "q1": 1.4053, "median": 1.8031, "q3": 2.2933, "p95": 3.1641, "n": 7}, "mean_3sd|flu|C|IgD-": {"p05": 1.2896, "q1": 1.7379, "median": 2.2612, "q3": 2.7085, "p95": 6.2503, "n": 8}, "mean_3sd|flu|C|CD27+IgD-": {"p05": 2.0941, "q1": 2.1513, "median": 3.0177, "q3": 4.8548, "p95": 6.8536, "n": 5}, "mean_3sd|fludose|A|IgD-": {"p05": 0.6578, "q1": 2.4262, "median": 2.5626, "q3": 4.1592, "p95": 8.662, "n": 9}, "mean_3sd|fludose|A|CD27+IgD-": {"p05": 0.6071, "q1": 1.095, "median": 3.4873, "q3": 6.476, "p95": 7.9077, "n": 7}, "mean_3sd|fludose|B|IgD-": {"p05": 1.5976, "q1": 1.8967, "median": 3.2314, "q3": 6.6562, "p95": 9.45, "n": 8}, "mean_3sd|fludose|B|CD27+IgD-": {"p05": 1.2934, "q1": 1.7869, "median": 1.8387, "q3": 2.8214, "p95": 9.052, "n": 5}, "mean_3sd|fludose|C|IgD-": {"p05": 0.655, "q1": 1.4845, "median": 2.9395, "q3": 6.3732, "p95": 8.6471, "n": 7}, "mean_3sd|fludose|C|CD27+IgD-": {"p05": 1.1001, "q1": 1.5861, "median": 2.2292, "q3": 4.4637, "p95": 5.6912, "n": 7}, "mean_3sd|day0_excluded|A|IgD-": {"p05": 1.1362, "q1": 2.1344, "median": 3.4303, "q3": 7.4773, "p95": 9.9116, "n": 7}, "mean_3sd|day0_excluded|A|CD27+IgD-": {"p05": 1.0488, "q1": 3.2423, "median": 4.4604, "q3": 4.7319, "p95": 5.886, "n": 6}, "mean_3sd|day0_excluded|B|IgD-": {"p05": 1.4778, "q1": 2.1137, "median": 3.0473, "q3": 5.9255, "p95": 8.7408, "n": 7}, "mean_3sd|day0_excluded|B|CD27+IgD-": {"p05": 1.5617, "q1": 3.2955, "median": 3.4662, "q3": 6.5257, "p95": 12.0526, "n": 5}, "mean_3sd|day0_excluded|C|IgD-": {"p05": 1.0067, "q1": 1.5086, "median": 3.571, "q3": 4.1021, "p95": 8.1955, "n": 5}, "mean_3sd|day0_excluded|C|CD27+IgD-": {"p05": 1.4811, "q1": 1.8727, "median": 2.4325, "q3": 4.7157, "p95": 6.3818, "n": 6}, "mean_3sd|day0_imputed|A|IgD-": {"p05": 1.1362, "q1": 2.1344, "median": 3.4303, "q3": 7.4773, "p95": 9.9116, "n": 7}, "mean_3sd|day0_imputed|A|CD27+IgD-": {"p05": 1.1719, "q1": 3.5898, "median": 4.636, "q3": 5.0344, "p95": 5.9735, "n": 7}, "mean_3sd|day0_imputed|B|IgD-": {"p05": 1.4778, "q1": 2.1137, "median": 3.0473, "q3": 5.9255, "p95": 8.7408, "n": 7}, "mean_3sd|day0_imputed|B|CD27+IgD-": {"p05": 1.7784, "q1": 3.3809, "median": 6.5257, "q3": 10.7071, "p95": 17.2288, "n": 7}, "mean_3sd|day0_imputed|C|IgD-": {"p05": 1.0695, "q1": 2.5398, "median": 4.1021, "q3": 5.4325, "p95": 8.3822, "n": 7}, "mean_3sd|day0_imputed|C|CD27+IgD-": {"p05": 1.5157, "q1": 2.1365, "median": 4.0093, "q3": 6.1379, "p95": 10.3048, "n": 8}, "p99|sim|A|IgD-": {"p05": 1.7717, "q1": 2.318, "median": 4.2369, "q3": 6.3814, "p95": 7.4691, "n": 4}, "p99|sim|A|CD27+IgD-": {"p05": 0.9872, "q1": 1.6201, "median": 2.4163, "q3": 3.9141, "p95": 6.231, "n": 4}, "p99|sim|B|IgD-": {"p05": 0.6588, "q1": 1.2511, "median": 2.1355, "q3": 2.6256, "p95": 5.3417, "n": 8}, "p99|sim|B|CD27+IgD-": {"p05": 2.3006, "q1": 2.5483, "median": 3.4443, "q3": 4.3594, "p95": 4.6526, "n": 4}, "p99|sim|C|IgD-": {"p05": 1.5076, "q1": 1.8176, "median": 2.1477, "q3": 4.0853, "p95": 6.338, "n": 7}, "p99|sim|C|CD27+IgD-": {"p05": 0.6458, "q1": 1.8767, "median": 2.4771, "q3": 5.3745, "p95": 7.1414, "n": 6}, "p99|flu|A|IgD-": {"p05": 1.2935, "q1": 1.5581, "median": 2.7639, "q3": 3.9377, "p95": 5.0545, "n": 8}, "p99|flu|A|CD27+IgD-": {"p05": 0.6169, "q1": 2.4548, "median": 3.3884, "q3": 3.7947, "p95": 7.3401, "n": 8}, "p99|flu|B|IgD-": {"p05": 1.4666, "q1": 1.7511, "median": 3.382, "q3": 6.2319, "p95": 7.1929, "n": 9}, "p99|flu|B|CD27+IgD-": {"p05": 1.2889, "q1": 1.4053, "median": 1.8031, "q3": 2.2933, "p95": 3.1641, "n": 7}, "p99|flu|C|IgD-": {"p05": 0.8429, "q1": 1.5269, "median": 2.1513, "q3": 2.6804, "p95": 5.9844, "n": 9}, "p99|flu|C|CD27+IgD-": {"p05": 2.0976, "q1": 2.2419, "median": 2.7657, "q3": 4.3955, "p95": 6.7286, "n": 6}, "p99|fludose|A|IgD-": {"p05": 1.3744, "q1": 2.5112, "median": 3.3598, "q3": 4.4819, "p95": 8.9297, "n": 8}, "p99|fludose|A|CD27+IgD-": {"p05": 0.5589, "q1": 0.6942, "median": 2.4711, "q3": 6.1323, "p95": 7.8545, "n": 8}, "p99|fludose|B|IgD-": {"p05": 1.5976, "q1": 1.8967, "median": 3.2314, "q3": 6.6562, "p95": 9.45, "n": 8}, "p99|fludose|B|CD27+IgD-": {"p05": 1.2934, "q1": 1.7869, "median": 1.8387, "q3": 2.8214, "p95": 9.052, "n": 5}, "p99|fludose|C|IgD-": {"p05": 0.655, "q1": 1.4845, "median": 2.9395, "q3": 6.3732, "p95": 8.6471, "n": 7}, "p99|fludose|C|CD27+IgD-": {"p05": 1.1001, "q1": 1.5861, "median": 2.2292, "q3": 4.4637, "p95": 5.6912, "n": 7}, "p99|day0_excluded|A|IgD-": {"p05": 1.1362, "q1": 2.1344, "median": 3.4303, "q3": 7.4773, "p95": 9.9116, "n": 7}, "p99|day0_excluded|A|CD27+IgD-": {"p05": 1.0488, "q1": 3.2423, "median": 4.4604, "q3": 4.7319, "p95": 5.886, "n": 6}, "p99|day0_excluded|B|IgD-": {"p05": 0.8339, "q1": 1.7022, "median": 2.724, "q3": 4.6927, "p95": 8.7158, "n": 8}, "p99|day0_excluded|B|CD27+IgD-": {"p05": 1.5617, "q1": 3.2955, "median": 3.4662, "q3": 6.5257, "p95": 12.0526, "n": 5}, "p99|day0_excluded|C|IgD-": {"p05": 1.0067, "q1": 1.5086, "median": 3.571, "q3": 4.1021, "p95": 8.1955, "n": 5}, "p99|day0_excluded|C|CD27+IgD-": {"p05": 1.4811, "q1": 1.8727, "median": 2.4325, "q3": 4.7157, "p95": 6.3818, "n": 6}, "p99|day0_imputed|A|IgD-": {"p05": 1.1362, "q1": 2.1344, "median": 3.4303, "q3": 7.4773, "p95": 9.9116, "n": 7}, "p99|day0_imputed|A|CD27+IgD-": {"p05": 1.1719, "q1": 3.5898, "median": 4.636, "q3": 5.0344, "p95": 5.9735, "n": 7}, "p99|day0_imputed|B|IgD-": {"p05": 0.8339, "q1": 1.7022, "median": 2.724, "q3": 4.6927, "p95": 8.7158, "n": 8}, "p99|day0_imputed|B|CD27+IgD-": {"p05": 1.7784, "q1": 3.3809, "median": 6.5257, "q3": 10.7071, "p95": 17.2288, "n": 7}, "p99|day0_imputed|C|IgD-": {"p05": 1.0695, "q1": 2.5398, "median": 4.1021, "q3": 5.4325, "p95": 8.3822, "n": 7}, "p99|day0_imputed|C|CD27+IgD-": {"p05": 1.5157, "q1": 2.1365, "median": 4.0093, "q3": 6.1379, "p95": 10.3048, "n": 8}}};
+    const ANT = DATA.antigens, SUB = DATA.subsets, ANTLAB = DATA.antigen_labels, ANTCOL = DATA.antigen_colors;
+    const STATS = DATA.stats, OPT = DATA.options, DEF = DATA.defaults;
+    const SCHED = ["Simultaneous", "Treatment 1 first", "Treatment-2-first"];
+    const FCV = [0.25, 0.5, 1, 2, 4, 8, 16], FCT = ["0.25×", "0.5×", "1×", "2×", "4×", "8×", "16×"];
+    const GATES = [["method", "g_method"], ["covid_baseline", "g_covid_baseline"]];
+
+    function populate() {
+      GATES.forEach(function (g) {
+        const sel = document.getElementById(g[1]);
+        OPT[g[0]].forEach(function (o) {
+          const op = document.createElement("option");
+          op.value = String(o[0]); op.textContent = o[1]; sel.appendChild(op);
+        });
+        sel.value = String(DEF[g[0]]);
+        sel.addEventListener("change", render);
+      });
+    }
+    function readSel() {
+      return { method: document.getElementById("g_method").value,
+               covid_baseline: document.getElementById("g_covid_baseline").value };
+    }
+    function laneFor(sel, sched) {
+      if (sched === "Simultaneous") return "sim";
+      if (sched === "Treatment 1 first") return "flu";
+      return sel.covid_baseline;
+    }
+    function statOf(sel, sched, ant, sub) {
+      return STATS[[sel.method, laneFor(sel, sched), ant, sub].join("|")];
+    }
+    function panelTrace(sel, suf, ant, sub) {
+      const x = [], q1 = [], md = [], q3 = [], lf = [], uf = [];
+      SCHED.forEach(function (sch) {
+        const st = statOf(sel, sch, ant, sub);
+        x.push(sch);
+        q1.push(st ? st.q1 : null); md.push(st ? st.median : null); q3.push(st ? st.q3 : null);
+        lf.push(st ? st.p05 : null); uf.push(st ? st.p95 : null);
+      });
+      return { type: "box", x: x, q1: q1, median: md, q3: q3, lowerfence: lf, upperfence: uf,
+               showlegend: false, marker: { color: ANTCOL[ant] || "#3a6ea5" }, line: { width: 1.2 },
+               boxpoints: false, xaxis: "x" + suf, yaxis: "y" + suf };
+    }
+    function buildLayout() {
+      const nr = SUB.length, nc = ANT.length, hg = 0.06, vg = 0.16;
+      const w = (1 - hg * (nc - 1)) / nc, h = (1 - vg * (nr - 1)) / nr;
+      const L = { height: 300 * nr + 120, margin: { l: 60, r: 15, t: 55, b: 45 }, boxmode: "group",
+                  showlegend: false, shapes: [], annotations: [], paper_bgcolor: "#fff", plot_bgcolor: "#fff" };
+      let idx = 0;
+      for (let r = 0; r < nr; r++) for (let c = 0; c < nc; c++) {
+        idx++; const suf = idx === 1 ? "" : String(idx);
+        const x0 = c * (w + hg), x1 = x0 + w, yt = 1 - r * (h + vg), y0 = yt - h, y1 = yt;
+        L["xaxis" + suf] = { domain: [x0, x1], anchor: "y" + suf, type: "category",
+                             categoryorder: "array", categoryarray: SCHED, tickfont: { size: 9 } };
+        L["yaxis" + suf] = { domain: [y0, y1], anchor: "x" + suf, type: "log", tickvals: FCV, ticktext: FCT,
+                             tickfont: { size: 9 }, title: { text: c === 0 ? "Fold change (log)" : "", font: { size: 11 } } };
+        L.annotations.push({ text: ANTLAB[ANT[c]] + " · " + SUB[r], x: (x0 + x1) / 2, y: y1,
+                             xref: "paper", yref: "paper", xanchor: "center", yanchor: "bottom",
+                             showarrow: false, font: { size: 12 } });
+        L.shapes.push({ type: "line", xref: "x" + suf + " domain", x0: 0, x1: 1, yref: "y" + suf, y0: 1, y1: 1,
+                        line: { color: "#99a3ad", width: 1, dash: "dot" } });
+      }
+      return L;
+    }
+    function buildTraces() {
+      const sel = readSel(), tr = []; let idx = 0;
+      for (let r = 0; r < SUB.length; r++) for (let c = 0; c < ANT.length; c++) {
+        idx++; tr.push(panelTrace(sel, idx === 1 ? "" : String(idx), ANT[c], SUB[r]));
+      }
+      return tr;
+    }
+    function render() { Plotly.react("explorer-plot", buildTraces(), buildLayout(), { displayModeBar: false, responsive: true }); }
+    populate(); render();
+  </script>
+</body>
+</html>

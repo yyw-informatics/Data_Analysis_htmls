@@ -1,0 +1,1906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CITE-seq ILC/NK Gating Strategy — Round 6</title>
+<style>
+:root {
+  --bg: #1a1a2e;
+  --bg2: #16213e;
+  --text: #e0e0e0;
+  --text2: #a0a0b0;
+  --border: #333355;
+  --panel-bg: #1e1e3a;
+  --node-stroke: #555;
+  --highlight: #ffd700;
+  --search-bg: #222244;
+  --legend-bg: #1e1e3a;
+  --tooltip-bg: #222244;
+  --btn-bg: #2a2a4a;
+  --btn-hover: #3a3a6a;
+  --breadcrumb-bg: #222244;
+  --link-adt: #3498DB;
+  --link-rna: #E67E22;
+  --link-score: #2ECC71;
+  --link-filter: #E74C3C;
+  --link-pass: #888;
+}
+.light {
+  --bg: #f5f5f5;
+  --bg2: #ffffff;
+  --text: #222;
+  --text2: #666;
+  --border: #ccc;
+  --panel-bg: #fff;
+  --node-stroke: #999;
+  --search-bg: #e8e8e8;
+  --legend-bg: #fff;
+  --tooltip-bg: #fff;
+  --btn-bg: #ddd;
+  --btn-hover: #bbb;
+  --breadcrumb-bg: #e8e8e8;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+/* HEADER */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  z-index: 10;
+  flex-shrink: 0;
+}
+.header h1 { font-size: 16px; font-weight: 600; }
+.header-controls { display: flex; gap: 8px; align-items: center; }
+.search-box {
+  background: var(--search-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  width: 180px;
+}
+.btn {
+  background: var(--btn-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--btn-hover); }
+.btn.active { border-color: var(--highlight); color: var(--highlight); }
+/* BREADCRUMB */
+.breadcrumb-bar {
+  background: var(--breadcrumb-bg);
+  padding: 4px 16px;
+  font-size: 12px;
+  color: var(--text2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  min-height: 24px;
+}
+.breadcrumb-bar span { cursor: pointer; }
+.breadcrumb-bar span:hover { color: var(--highlight); }
+.breadcrumb-bar .sep { margin: 0 4px; color: var(--text2); cursor: default; }
+/* MAIN */
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+/* LEGEND */
+.legend-panel {
+  width: 200px;
+  min-width: 200px;
+  background: var(--legend-bg);
+  border-right: 1px solid var(--border);
+  padding: 12px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.legend-panel h3 { font-size: 13px; margin-bottom: 8px; color: var(--text2); }
+.legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }
+.legend-swatch {
+  width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;
+}
+.legend-line {
+  width: 30px; height: 0; flex-shrink: 0;
+}
+.legend-section { margin-top: 12px; }
+.legend-section-title { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
+/* SVG CONTAINER */
+.svg-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  cursor: grab;
+}
+.svg-container:active { cursor: grabbing; }
+.svg-container svg { display: block; }
+/* TOOLTIP */
+.tooltip {
+  position: fixed;
+  background: var(--tooltip-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 100;
+  max-width: 280px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.tooltip.show { opacity: 1; }
+.tooltip .tt-title { font-weight: 700; margin-bottom: 2px; }
+.tooltip .tt-sub { color: var(--text2); font-size: 11px; }
+/* DETAIL PANEL */
+.detail-panel {
+  width: 0;
+  overflow: hidden;
+  background: var(--panel-bg);
+  border-left: 1px solid var(--border);
+  transition: width 0.3s ease;
+  flex-shrink: 0;
+}
+.detail-panel.open { width: 340px; }
+.detail-inner {
+  width: 340px;
+  padding: 16px;
+  overflow-y: auto;
+  height: 100%;
+}
+.detail-close {
+  float: right;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--text2);
+  background: none;
+  border: none;
+}
+.detail-close:hover { color: var(--text); }
+.detail-title { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
+.detail-subtitle { font-size: 13px; color: var(--text2); margin-bottom: 12px; }
+.detail-section { margin-bottom: 12px; }
+.detail-section h4 { font-size: 11px; text-transform: uppercase; color: var(--text2); letter-spacing: 0.5px; margin-bottom: 4px; }
+.detail-section p, .detail-section ul { font-size: 13px; line-height: 1.5; }
+.detail-section ul { list-style: none; padding: 0; }
+.detail-section ul li { padding: 2px 0; }
+.detail-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+}
+.detail-warning {
+  background: #E74C3C22;
+  border: 1px solid #E74C3C55;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #E74C3C;
+  margin-bottom: 10px;
+}
+.detail-nav { display: flex; flex-wrap: wrap; gap: 4px; }
+.detail-nav-btn {
+  background: var(--btn-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 2px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.detail-nav-btn:hover { border-color: var(--highlight); color: var(--highlight); }
+.paper-link { color: #5dade2; text-decoration: none; font-size: 12px; }
+.paper-link:hover { text-decoration: underline; }
+/* ZOOM CONTROLS */
+.zoom-controls {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 5;
+}
+.zoom-btn {
+  width: 32px; height: 32px;
+  background: var(--btn-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.zoom-btn:hover { background: var(--btn-hover); }
+/* FOOTER */
+.footer {
+  padding: 4px 16px;
+  font-size: 11px;
+  color: var(--text2);
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.footer a { color: #5dade2; text-decoration: none; }
+.footer a:hover { text-decoration: underline; }
+/* Node highlight */
+.node-group { cursor: pointer; }
+.node-group:hover .node-rect { filter: brightness(1.2); }
+.node-group.selected .node-rect { stroke: var(--highlight); stroke-width: 2.5; }
+.node-group.dimmed { opacity: 0.25; }
+.edge-path.dimmed { opacity: 0.1; }
+.edge-path.highlighted { opacity: 1; stroke-width: 2.5; }
+/* Confidence ring */
+.conf-ring { fill: none; stroke-width: 2; }
+/* Collapsed indicator */
+.collapse-pill {
+  cursor: pointer;
+  font-size: 10px;
+}
+/* REFERENCE TABLE OVERLAY */
+.ref-table-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+.ref-table-overlay.show { display: flex; }
+.ref-table-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  max-width: 1050px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  position: relative;
+}
+.ref-table-card h2 {
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.ref-table-close {
+  position: absolute;
+  top: 12px; right: 16px;
+  background: none; border: none;
+  color: var(--text2); font-size: 22px;
+  cursor: pointer;
+}
+.ref-table-close:hover { color: var(--text); }
+.ref-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.ref-table th {
+  background: var(--btn-bg);
+  color: var(--text);
+  font-weight: 600;
+  padding: 5px 10px;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0.3px;
+}
+.ref-table td {
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.ref-table tr:hover td { background: rgba(255,255,255,0.04); }
+.light .ref-table tr:hover td { background: rgba(0,0,0,0.03); }
+.ref-table .gene-tag {
+  display: inline-block;
+  padding: 1px 5px;
+  margin: 1px 2px;
+  border-radius: 3px;
+  font-family: 'Consolas', 'Menlo', monospace;
+  font-size: 12px;
+}
+.gene-tag.adt { background: rgba(52,152,219,0.2); color: #5dade2; }
+.gene-tag.rna { background: rgba(230,126,34,0.15); color: #E67E22; }
+.gene-tag.tf { background: rgba(155,89,182,0.2); color: #BB8FCE; }
+.gene-tag.neg { background: rgba(231,76,60,0.15); color: #E74C3C; text-decoration: line-through; }
+.ref-cite {
+  font-size: 10px;
+  color: var(--text2);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+/* FIGURES OVERLAY */
+.fig-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+.fig-overlay.show { display: flex; }
+.fig-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  width: 85vw;
+  max-width: 1100px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  position: relative;
+}
+.fig-close {
+  position: absolute;
+  top: 10px; right: 14px;
+  background: none; border: none;
+  color: var(--text2); font-size: 22px;
+  cursor: pointer; z-index: 5;
+}
+.fig-close:hover { color: var(--text); }
+.fig-tabs {
+  display: flex; gap: 0; margin-bottom: 12px;
+  border-bottom: 2px solid var(--border);
+}
+.fig-tab {
+  padding: 6px 16px;
+  font-size: 13px; font-weight: 600;
+  color: var(--text2);
+  background: none; border: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.fig-tab:hover { color: var(--text); }
+.fig-tab.active {
+  color: var(--highlight);
+  border-bottom-color: var(--highlight);
+}
+.fig-panel { display: none; text-align: center; }
+.fig-panel.active { display: block; }
+.fig-panel img {
+  width: 100%;
+  max-height: 75vh;
+  object-fit: contain;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+.fig-caption {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.5;
+  text-align: left;
+}
+.ref-table-legend {
+  flex-direction: column;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text2);
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.ref-table-legend span { display: flex; align-items: center; gap: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>CITE-seq ILC/NK Classification — Step 11 Round 6</h1>
+  <div class="header-controls">
+    <input type="text" class="search-box" id="searchBox" placeholder="Search populations..." />
+    <button class="btn" id="themeToggle" title="Toggle light/dark theme">Theme</button>
+    <button class="btn" id="abundanceToggle" title="Color nodes by abundance">Abundance</button>
+    <button class="btn" id="expandAll" title="Expand all collapsed branches">Expand All</button>
+    <button class="btn" id="resetView" title="Reset zoom and pan">Reset</button>
+    <button class="btn" id="toggleRefTable" title="Show ILC classification reference table">ILC Table</button>
+    <button class="btn" id="toggleFigures" title="Show UMAP and dotplot figures">Figures</button>
+  </div>
+</div>
+<div class="breadcrumb-bar" id="breadcrumb">All Cells</div>
+<div class="main">
+  <!-- LEGEND -->
+  <div class="legend-panel">
+    <h3>Legend</h3>
+    <div class="legend-section">
+      <div class="legend-section-title">Node Categories</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#95A5A6"></div>LowQuality</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#E74C3C"></div>Contaminants</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#3498DB"></div>pDC</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#A6761D"></div>Off-target</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#16A085"></div>NK subtypes</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#8E44AD"></div>ILC subtypes</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#F39C12"></div>ILC1-like (0 cells)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#CE93D8"></div>ILCP type3-biased</div>
+    </div>
+    <div class="legend-section">
+      <div class="legend-section-title">Edge Types</div>
+      <div class="legend-item"><svg width="30" height="10"><line x1="0" y1="5" x2="30" y2="5" stroke="#3498DB" stroke-width="2"/></svg>ADT gate</div>
+      <div class="legend-item"><svg width="30" height="10"><line x1="0" y1="5" x2="30" y2="5" stroke="#E67E22" stroke-width="2" stroke-dasharray="5,3"/></svg>RNA gate</div>
+      <div class="legend-item"><svg width="30" height="10"><line x1="0" y1="5" x2="30" y2="5" stroke="#2ECC71" stroke-width="2" stroke-dasharray="6,3,2,3"/></svg>Score</div>
+      <div class="legend-item"><svg width="30" height="10"><line x1="0" y1="5" x2="30" y2="5" stroke="#E74C3C" stroke-width="1.5"/></svg>Filter</div>
+      <div class="legend-item"><svg width="30" height="10"><line x1="0" y1="5" x2="30" y2="5" stroke="#888" stroke-width="1.5"/></svg>Pass-through</div>
+    </div>
+    <div class="legend-section">
+      <div class="legend-section-title">Confidence Rings</div>
+      <div class="legend-item"><svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="none" stroke="#2ECC71" stroke-width="2"/></svg>High</div>
+      <div class="legend-item"><svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="none" stroke="#F1C40F" stroke-width="2"/></svg>Medium</div>
+      <div class="legend-item"><svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="none" stroke="#E74C3C" stroke-width="2"/></svg>Low</div>
+    </div>
+    <div class="legend-section">
+      <div class="legend-section-title">Interactions</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.5;">
+        Click: select node<br>
+        Double-click: collapse/expand<br>
+        Ctrl+scroll: zoom<br>
+        Drag: pan<br>
+      </div>
+    </div>
+    <div class="legend-section" style="margin-top:20px;">
+      <div class="legend-section-title">Study</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.5;">
+        6 donors, young vs aged<br>
+        Day 0 + Day 7 post-vaccine<br>
+        16 CITE-seq libraries<br>
+        161,182 total cells
+      </div>
+    </div>
+  </div>
+  <!-- SVG -->
+  <div class="svg-container" id="svgContainer">
+    <svg id="treeSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="zoom-controls">
+      <button class="zoom-btn" id="zoomIn" title="Zoom in">+</button>
+      <button class="zoom-btn" id="zoomOut" title="Zoom out">-</button>
+      <button class="zoom-btn" id="zoomFit" title="Fit to view">&#8690;</button>
+    </div>
+  </div>
+  <!-- DETAIL PANEL -->
+  <div class="detail-panel" id="detailPanel">
+    <div class="detail-inner" id="detailInner"></div>
+  </div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+
+<!-- ILC Classification Reference Table -->
+<div class="ref-table-overlay" id="refTableOverlay">
+  <div class="ref-table-card">
+    <button class="ref-table-close" id="refTableClose">&times;</button>
+    <h2>ILC Classification Reference — ADT Phenotype, Flow Mapping &amp; Gene Markers</h2>
+    <table class="ref-table">
+      <thead>
+        <tr>
+          <th>Fine Label</th>
+          <th>Flow Label</th>
+          <th>ADT Marker</th>
+          <th>Count</th>
+          <th>Key RNA Markers</th>
+          <th>Key References</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="color:#8E44AD;font-weight:600;">ILC2_CD117neg</td>
+          <td>flow_ILC2</td>
+          <td><span class="gene-tag adt">CRTH2+</span></td>
+          <td>1,470</td>
+          <td><span class="gene-tag tf">GATA3</span> <span class="gene-tag rna">HPGDS</span> <span class="gene-tag rna">IL1RL1</span> <span class="gene-tag rna">PTGDR2</span> <span class="gene-tag rna">IL17RB</span></td>
+          <td class="ref-cite"><a class="paper-link" href="https://doi.org/10.1182/blood-2013-11-427781" target="_blank">Hazenberg 2014</a><br><a class="paper-link" href="https://doi.org/10.3389/fimmu.2020.594107" target="_blank">Darboe 2020</a><br><a class="paper-link" href="https://doi.org/10.1038/s41422-020-00445-x" target="_blank">Mazzurana 2021</a><br><a class="paper-link" href="https://doi.org/10.1038/s41590-024-01885-y" target="_blank">Jaeger 2024</a></td>
+        </tr>
+        <tr>
+          <td style="color:#AF7AC5;font-weight:600;">ILC2_CD117pos</td>
+          <td>flow_ILC2</td>
+          <td><span class="gene-tag adt">CRTH2+</span> <span class="gene-tag adt">CD117+</span></td>
+          <td>96</td>
+          <td><span class="gene-tag tf">GATA3</span> <span class="gene-tag rna">HPGDS</span> <span class="gene-tag rna">IL1RL1</span> <span class="gene-tag rna">KIT</span></td>
+          <td class="ref-cite"><a class="paper-link" href="https://doi.org/10.1182/blood-2013-11-427781" target="_blank">Hazenberg 2014</a><br><a class="paper-link" href="https://doi.org/10.3389/fimmu.2020.594107" target="_blank">Darboe 2020</a><br><a class="paper-link" href="https://doi.org/10.1084/jem.20231827" target="_blank">Matha 2024</a></td>
+        </tr>
+        <tr>
+          <td style="color:#5E35B1;font-weight:600;">ILC3</td>
+          <td>flow_ILC3</td>
+          <td><span class="gene-tag adt">CRTH2&minus;</span> <span class="gene-tag adt">CD117+</span></td>
+          <td>139</td>
+          <td><span class="gene-tag tf">RORC</span> <span class="gene-tag rna">AHR</span> <span class="gene-tag rna">CCR6</span> <span class="gene-tag rna">IL23R</span> <span class="gene-tag rna">IL1R1</span></td>
+          <td class="ref-cite"><a class="paper-link" href="https://doi.org/10.1182/blood-2013-11-427781" target="_blank">Hazenberg 2014</a><br><a class="paper-link" href="https://doi.org/10.1038/s41598-019-50308-8" target="_blank">Bonne-Annee 2019</a><br><a class="paper-link" href="https://doi.org/10.1038/s41422-020-00445-x" target="_blank">Mazzurana 2021</a><br><a class="paper-link" href="https://doi.org/10.1038/s42003-024-06450-9" target="_blank">Hashemi 2024</a></td>
+        </tr>
+        <tr>
+          <td style="color:#7E57C2;font-weight:600;">ILCP</td>
+          <td>flow_ILC3</td>
+          <td><span class="gene-tag adt">CRTH2&minus;</span> <span class="gene-tag adt">CD117+</span></td>
+          <td>4,232</td>
+          <td><span class="gene-tag tf">ID2</span> <span class="gene-tag tf">TCF7</span> <span class="gene-tag rna">IL7R</span> <span class="gene-tag rna">TOX</span> <span class="gene-tag neg">RORC</span></td>
+          <td class="ref-cite"><a class="paper-link" href="https://doi.org/10.1038/s41422-020-00445-x" target="_blank">Mazzurana 2021</a><br><a class="paper-link" href="https://doi.org/10.1016/j.isci.2023.107728" target="_blank">Falquet 2023</a><br><a class="paper-link" href="https://doi.org/10.15252/embj.2023114153" target="_blank">Wang 2023</a></td>
+        </tr>
+        <tr>
+          <td style="color:#CE93D8;font-weight:600;">ILCP_type3_biased</td>
+          <td>flow_ILC3 / flow_ILC1</td>
+          <td><span class="gene-tag adt">CRTH2&minus;</span> <span class="gene-tag adt">CD117+/&minus;</span></td>
+          <td>155</td>
+          <td><span class="gene-tag tf">RORC</span> <span class="gene-tag tf">ID2</span> <span class="gene-tag rna">IL7R</span> <span class="gene-tag rna">AHR</span> <span class="gene-tag rna">CCR6</span></td>
+          <td class="ref-cite"><a class="paper-link" href="https://doi.org/10.1038/s41422-020-00445-x" target="_blank">Mazzurana 2021</a><br><a class="paper-link" href="https://doi.org/10.1016/j.isci.2023.107728" target="_blank">Falquet 2023</a></td>
+        </tr>
+        <tr>
+          <td style="color:#B39DDB;font-weight:600;">ILCP_KITlow</td>
+          <td>flow_ILC1</td>
+          <td><span class="gene-tag adt">CRTH2&minus;</span> <span class="gene-tag adt">CD117&minus;</span></td>
+          <td>2,951</td>
+          <td><span class="gene-tag rna">IL7R</span> <span class="gene-tag tf">ID2</span> <span class="gene-tag tf">TCF7</span> <span class="gene-tag rna">TOX</span> <span class="gene-tag neg">KIT</span></td>
+          <td class="ref-cite"><a class="paper-link" href="https://doi.org/10.1038/s41422-020-00445-x" target="_blank">Mazzurana 2021</a><br><a class="paper-link" href="https://doi.org/10.1016/j.isci.2023.107728" target="_blank">Falquet 2023</a><br><a class="paper-link" href="https://doi.org/10.15252/embj.2023114153" target="_blank">Wang 2023</a></td>
+        </tr>
+        <tr>
+          <td style="color:#F39C12;font-weight:600;">ILC1_like</td>
+          <td>flow_ILC1</td>
+          <td><span class="gene-tag adt">CRTH2&minus;</span> <span class="gene-tag adt">CD117&minus;</span></td>
+          <td>0</td>
+          <td><span class="gene-tag tf">TBX21</span> <span class="gene-tag neg">EOMES</span> <span class="gene-tag rna">IFNG</span> <span class="gene-tag rna">TNF</span> <span class="gene-tag neg">NKG7</span></td>
+          <td class="ref-cite"><a class="paper-link" href="https://doi.org/10.1016/j.immuni.2016.11.005" target="_blank">Simoni 2017</a><br><a class="paper-link" href="https://doi.org/10.1038/s41422-020-00445-x" target="_blank">Mazzurana 2021</a><br><a class="paper-link" href="https://doi.org/10.1111/imm.13835" target="_blank">Taheri 2024</a></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="ref-table-legend">
+      <span><span class="gene-tag adt">ADT</span> ADT protein gate</span>
+      <span><span class="gene-tag tf">TF</span> Transcription factor (RNA)</span>
+      <span><span class="gene-tag rna">RNA</span> RNA expression marker</span>
+      <span><span class="gene-tag neg">NEG</span> Negative / absent (required exclusion)</span>
+    </div>
+    <div style="margin-top:8px;font-size:12px;color:var(--text2);line-height:1.5;">
+      <strong>cell_type_flow mapping</strong>
+      <ul style="margin:4px 0 0 16px;padding:0;">
+        <li>ILC cells are reclassified into flow-comparable categories (Lin&minus;CD127+ &rarr; CRTH2/CD117 quadrant)</li>
+        <li><strong>flow_ILC2</strong> = CRTH2+</li>
+        <li><strong>flow_ILC3</strong> = CRTH2&minus; CD117+</li>
+        <li><strong>flow_ILC1</strong> = CRTH2&minus; CD117&minus;</li>
+        <li>ILCP_type3_biased maps to <strong>flow_ILC3</strong> (if from CD117+ ILCP) or <strong>flow_ILC1</strong> (if from CD117&minus; ILCP_KITlow)</li>
+        <li>NK, pDC, and other populations retain their coarse label in cell_type_flow</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Figures Overlay -->
+<div class="fig-overlay" id="figOverlay">
+  <div class="fig-card">
+    <button class="fig-close" id="figClose">&times;</button>
+    <div class="fig-tabs">
+      <button class="fig-tab active" data-fig="macs">MACS Enrichment</button>
+      <button class="fig-tab" data-fig="umap">UMAP — Cell Types</button>
+      <button class="fig-tab" data-fig="dotplot">Marker Dotplot</button>
+    </div>
+    <div class="fig-panel active" id="fig-macs">
+      <svg viewBox="0 0 900 430" style="max-width:100%;width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background -->
+        <rect width="900" height="420" fill="none"/>
+        <!-- Title -->
+        <text x="450" y="28" text-anchor="middle" font-size="16" font-weight="700" fill="var(--text)">MACS Two-Step Enrichment → 10x Chromium Loading</text>
+        <!-- PBMC input -->
+        <rect x="20" y="55" width="130" height="60" rx="8" fill="#7F8C8D" opacity="0.85"/>
+        <text x="85" y="80" text-anchor="middle" font-size="13" font-weight="600" fill="#fff">Whole PBMC</text>
+        <text x="85" y="97" text-anchor="middle" font-size="10" fill="#ddd">6 donors × 2 timepoints</text>
+        <!-- Arrow 1 -->
+        <line x1="150" y1="85" x2="195" y2="85" stroke="var(--text2)" stroke-width="2" marker-end="url(#fig-arrow)"/>
+        <!-- Step 1: CD56+ selection -->
+        <rect x="200" y="45" width="195" height="80" rx="8" fill="#16A085" opacity="0.85"/>
+        <text x="297" y="68" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">Step 1: anti-CD56 MACS</text>
+        <text x="297" y="84" text-anchor="middle" font-size="10" fill="#ddd">Positive selection column</text>
+        <text x="297" y="100" text-anchor="middle" font-size="10" fill="#ddd">Captures CD56+ cells</text>
+        <text x="297" y="115" text-anchor="middle" font-size="9" fill="#a0ddd0">(NK cells, some ILC3/ILCP)</text>
+        <!-- Arrow down from Step 1 -->
+        <line x1="297" y1="125" x2="297" y2="168" stroke="#16A085" stroke-width="2" marker-end="url(#fig-arrow-teal)"/>
+        <text x="305" y="152" font-size="9" fill="#16A085" font-weight="600">~30%</text>
+        <!-- NK-enriched fraction -->
+        <rect x="222" y="172" width="150" height="38" rx="6" fill="#148F77" opacity="0.8"/>
+        <text x="297" y="195" text-anchor="middle" font-size="11" font-weight="600" fill="#fff">NK-enriched fraction</text>
+        <!-- Arrow 2 from PBMC to Step 2 (routed below NK box and depleted box) -->
+        <path d="M 85,115 L 85,230 Q 85,245 100,245 L 490,245 Q 505,245 505,230 L 505,135" fill="none" stroke="var(--text2)" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="290" y="238" text-anchor="middle" font-size="9" fill="var(--text2)">Flow-through (CD56− cells)</text>
+        <!-- Step 2: Lin depletion -->
+        <rect x="410" y="45" width="195" height="80" rx="8" fill="#9B59B6" opacity="0.85"/>
+        <text x="507" y="68" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">Step 2: Lin-PE depletion</text>
+        <text x="507" y="84" text-anchor="middle" font-size="10" fill="#ddd">Negative selection (remove)</text>
+        <text x="507" y="100" text-anchor="middle" font-size="10" fill="#ddd">anti-CD3/CD11c/CD14/CD19</text>
+        <text x="507" y="115" text-anchor="middle" font-size="9" fill="#d2b4de">No CD123 → pDCs survive!</text>
+        <!-- Arrow down from Step 2: depleted -->
+        <line x1="460" y1="125" x2="460" y2="168" stroke="#E74C3C" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#fig-arrow-red)"/>
+        <text x="430" y="152" font-size="9" fill="#E74C3C">Depleted</text>
+        <!-- Depleted fraction -->
+        <rect x="400" y="172" width="120" height="38" rx="6" fill="#E74C3C" opacity="0.5"/>
+        <text x="460" y="188" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">T, B, Mono, DC</text>
+        <text x="460" y="201" text-anchor="middle" font-size="8" fill="#fbb">discarded</text>
+        <!-- Arrow down from Step 2: enriched -->
+        <line x1="555" y1="125" x2="555" y2="168" stroke="#9B59B6" stroke-width="2" marker-end="url(#fig-arrow-purple)"/>
+        <text x="565" y="152" font-size="9" fill="#9B59B6" font-weight="600">~70%</text>
+        <!-- ILC-enriched fraction -->
+        <rect x="530" y="172" width="150" height="38" rx="6" fill="#8E44AD" opacity="0.8"/>
+        <text x="605" y="195" text-anchor="middle" font-size="11" font-weight="600" fill="#fff">ILC-enriched fraction</text>
+        <!-- Recombine arrows -->
+        <line x1="297" y1="210" x2="297" y2="275" stroke="#16A085" stroke-width="2"/>
+        <line x1="605" y1="210" x2="605" y2="275" stroke="#9B59B6" stroke-width="2"/>
+        <line x1="297" y1="275" x2="605" y2="275" stroke="var(--text2)" stroke-width="2"/>
+        <line x1="450" y1="275" x2="450" y2="303" stroke="var(--text2)" stroke-width="2" marker-end="url(#fig-arrow)"/>
+        <text x="452" y="267" text-anchor="middle" font-size="10" font-weight="600" fill="var(--text)">Recombine ~30:70</text>
+        <!-- 10x loading -->
+        <rect x="370" y="305" width="160" height="45" rx="8" fill="#2C3E50" stroke="var(--border)" stroke-width="1"/>
+        <text x="450" y="325" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">10x Chromium</text>
+        <text x="450" y="341" text-anchor="middle" font-size="10" fill="#ddd">CITE-seq (RNA + 5 ADT)</text>
+        <!-- Arrow to output -->
+        <line x1="450" y1="350" x2="450" y2="373" stroke="var(--text2)" stroke-width="2" marker-end="url(#fig-arrow)"/>
+        <!-- Output -->
+        <rect x="340" y="375" width="220" height="45" rx="8" fill="#2980B9" opacity="0.8"/>
+        <text x="450" y="395" text-anchor="middle" font-size="12" font-weight="600" fill="#fff">161,182 cells × 16 libraries</text>
+        <a href="methods_subway.html" target="_blank">
+          <text x="450" y="411" text-anchor="middle" font-size="10" fill="#60A5FA" text-decoration="underline" style="cursor:pointer;">→ Classification pipeline (methods subway map)</text>
+        </a>
+        <!-- Consequence callouts -->
+        <rect x="680" y="55" width="200" height="155" rx="8" fill="var(--bg2)" stroke="#E67E22" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="780" y="75" text-anchor="middle" font-size="11" font-weight="700" fill="#E67E22">Enrichment consequences</text>
+        <text x="695" y="96" font-size="10" fill="var(--text)">• NK inflated (~30% of input)</text>
+        <text x="695" y="113" font-size="10" fill="var(--text)">• ILCs rare (~5% of total)</text>
+        <text x="695" y="130" font-size="10" fill="var(--text)">• pDCs survive (no CD123)</text>
+        <text x="695" y="147" font-size="10" fill="var(--text)">• HSPCs co-enrich via CD117</text>
+        <text x="695" y="164" font-size="10" fill="var(--text)">• Frequencies ≠ blood</text>
+        <text x="695" y="181" font-size="10" fill="var(--text)">• Some Lin+ cells leak through</text>
+        <text x="695" y="198" font-size="9" fill="var(--text2)">(→ use within-compartment fractions)</text>
+        <!-- ADT panel callout -->
+        <rect x="680" y="230" width="200" height="110" rx="8" fill="var(--bg2)" stroke="#3498DB" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="780" y="250" text-anchor="middle" font-size="11" font-weight="700" fill="#3498DB">ADT panel (5 markers)</text>
+        <text x="695" y="272" font-size="10" fill="var(--text)">✓ CD7 (ILC/NK lineage)</text>
+        <text x="695" y="289" font-size="10" fill="var(--text)">✓ CRTH2/CD294 (ILC2)</text>
+        <text x="695" y="306" font-size="10" fill="var(--text)">✓ CD117/KIT (ILC3/ILCP)</text>
+        <text x="695" y="323" font-size="10" fill="var(--text)">✓ CD16/FCGR3A (NK dim)</text>
+        <text x="695" y="340" font-size="10" fill="#E74C3C">✗ CD127/IL7R (broken)</text>
+        <!-- Arrowhead defs -->
+        <defs>
+          <marker id="fig-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--text2)"/>
+          </marker>
+          <marker id="fig-arrow-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#16A085"/>
+          </marker>
+          <marker id="fig-arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#9B59B6"/>
+          </marker>
+          <marker id="fig-arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#E74C3C"/>
+          </marker>
+        </defs>
+      </svg>
+      <div class="fig-caption">
+        <strong>Two-step MACS enrichment workflow</strong>
+        <ul style="margin:4px 0 0 16px;padding:0;list-style:disc;">
+          <li><strong>Step 1</strong>: anti-CD56 positive selection captures NK cells (~30% of final pool)</li>
+          <li><strong>Step 2</strong>: Lineage-PE depletion (anti-CD3/CD11c/CD14/CD19) enriches ILCs from the CD56-negative flow-through (~70%)</li>
+          <li>Fractions recombined ~30:70 before 10x Chromium loading</li>
+          <li>No CD123 in depletion panel — pDCs survive, explaining the large pDC_like population (23%)</li>
+          <li>CD127/IL7R ADT clone is mouse-reactive and non-functional on human cells</li>
+        </ul>
+      </div>
+    </div>
+    <div class="fig-panel" id="fig-umap">
+      <img src="../figures/manuscript_umap_celltypes.png" alt="UMAP colored by cell type">
+      <div class="fig-caption">
+        <strong>UMAP embedding colored by fine cell type labels</strong>
+        <ul style="margin:4px 0 0 16px;padding:0;list-style:disc;">
+          <li>totalVI latent space (20 dimensions) reduced to 2D</li>
+          <li>Each dot is one cell; colors correspond to the classification tree nodes</li>
+          <li>NK subtypes (CD56dim, CD56bright, intermediate) cluster together</li>
+          <li>ILC subtypes are rarer and interspersed among the larger pDC-like and HSPC populations</li>
+        </ul>
+      </div>
+    </div>
+    <div class="fig-panel" id="fig-dotplot">
+      <img src="../figures/manuscript_dotplot_markers.png" alt="Marker dotplot with per-cell-type labels">
+      <div class="fig-caption">
+        <strong>Dotplot of key classification markers per cell type (fine labels)</strong>
+        <ul style="margin:4px 0 0 16px;padding:0;list-style:disc;">
+          <li>Dot size = fraction of cells expressing the gene; color = mean expression level</li>
+          <li>GATA3/HPGDS mark ILC2; RORC marks ILC3; NKG7/GNLY/PRF1 mark NK</li>
+          <li>PLD4/CLEC4C mark pDC_like; SOX4/MEIS1 mark HSPC</li>
+          <li>Each row is a fine cell type label matching the classification tree</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <span>2026-04-03 — Round 6: quality-first 7-tier hierarchy + Round 4 post-hoc corrections</span>
+  <span><a href="../figures/figure_gating_strategy.pdf" target="_blank">Static PDF</a> | Total: 161,182 cells</span>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+// ── DATA ──────────────────────────────────────────────────────────────
+var TOTAL = 161182;
+
+var PAPERS = {
+  "Jaeger 2024": { doi: "10.1038/s41590-024-01885-y", journal: "Nat Immunol" },
+  "Hazenberg 2014": { doi: "10.1182/blood-2013-11-427781", journal: "Blood" },
+  "Hashemi 2024": { doi: "10.1038/s42003-024-06450-9", journal: "Commun Biol" },
+  "Wang 2023": { doi: "10.15252/embj.2023114153", journal: "EMBO J" },
+  "Falquet 2023": { doi: "10.1016/j.isci.2023.107728", journal: "iScience" },
+  "Simoni 2017": { doi: "10.1016/j.immuni.2016.11.005", journal: "Immunity" },
+  "Mazzurana 2021": { doi: "10.1038/s41422-020-00445-x", journal: "Cell Res" },
+  "Darboe 2020": { doi: "10.3389/fimmu.2020.594107", journal: "Front Immunol" },
+  "Bonne-Annee 2019": { doi: "10.1038/s41598-019-50308-8", journal: "Sci Rep" },
+  "Matha 2024": { doi: "10.1084/jem.20231827", journal: "J Exp Med" },
+  "Wells 2025": { doi: "10.1038/s41590-025-02241-4", journal: "Nat Immunol" },
+  "Graydon 2023": { doi: "10.3389/fimmu.2023.1116392", journal: "Front Immunol" },
+  "Taheri 2024": { doi: "10.1111/imm.13835", journal: "Immunology" },
+  "Swieboda 2024": { doi: "10.1016/j.mucimm.2024.03.005", journal: "Mucosal Immunol" },
+  "Mboko 2025": { doi: "10.1038/s41590-025-02098-7", journal: "Nat Immunol" },
+  "Li 2022": { doi: "10.1016/j.celrep.2022.111569", journal: "Cell Rep" }
+};
+
+// Node definitions
+var NODES = {
+  "all_cells": {
+    id: "all_cells", label: "All Cells", count: 161182, color: "#555577",
+    x: 740, y: 30, w: 120, h: 36,
+    confidence: null, is_branch: false, collapsed: false,
+    detail: {
+      title: "All Cells", subtitle: "Root node",
+      category: "Root", catColor: "#555577",
+      gate: "All droplets passing CellRanger",
+      gate_type: "None",
+      markers: [],
+      papers: [],
+      paper_note: "",
+      role: "Starting pool of 161,182 cells from 16 CITE-seq libraries (6 donors x 2-3 timepoints).",
+      freq: "100%",
+      notes: "6 donors (3 young, 3 aged), day 0 and day 7 post-influenza vaccination.",
+      warning: null,
+      parents: [], children: ["lowquality","contaminants","pdc","off_target","ilc_nk_pool"]
+    }
+  },
+  "lowquality": {
+    id: "lowquality", label: "LowQuality", count: 50166, color: "#95A5A6",
+    x: 100, y: 130, w: 110, h: 36,
+    confidence: "high", is_branch: false, collapsed: false,
+    detail: {
+      title: "LowQuality / Ambient", subtitle: "Tier 0 — Quality triage",
+      category: "LowQuality", catColor: "#95A5A6",
+      gate: "n_genes < 500 OR mito% > 15% OR platelet/RBC score > 0.5",
+      gate_type: "QC filter",
+      markers: ["MT genes", "HBA1", "HBA2", "PF4", "PPBP"],
+      papers: [],
+      paper_note: "",
+      role: "Empty droplets, dying cells, and red blood cell / platelet contamination removed first.",
+      freq: "31.1% of all cells",
+      notes: "Labeled LowQuality_Ambient in final annotations. Removed before any biological gating.",
+      warning: null,
+      parents: ["all_cells"], children: []
+    }
+  },
+  "contaminants": {
+    id: "contaminants", label: "Contaminants", count: 13441, color: "#E74C3C",
+    x: 280, y: 130, w: 120, h: 36,
+    confidence: "high", is_branch: false, collapsed: false,
+    detail: {
+      title: "Contaminants", subtitle: "Tier 1 — Lineage exclusion",
+      category: "Contaminant", catColor: "#E74C3C",
+      gate: "T-cell score > 1.0 | Lineage score > 0.5 | B-cell score > 0.3 | Myeloid score > 0.5",
+      gate_type: "RNA score filters",
+      markers: ["CD3D", "CD3E", "TRAC (T)", "MS4A1", "CD79A (B)", "LYZ", "CST3 (Mono)", "CD14"],
+      papers: ["Simoni 2017"],
+      paper_note: "MACS Lin-depletion is imperfect; RNA scores catch residual lineage+ cells.",
+      role: "Non-ILC/NK cells that survived MACS depletion: T cells (3,651), lineage+ (5,608), B cells (1,894), monocytes/DC (2,288).",
+      freq: "8.3% of all cells",
+      notes: "Four sub-gates applied in priority order (T > Lin > B > Mono).",
+      warning: null,
+      parents: ["all_cells"], children: []
+    }
+  },
+  "pdc": {
+    id: "pdc", label: "pDC", count: 37661, color: "#3498DB",
+    x: 460, y: 130, w: 90, h: 36,
+    confidence: "high", is_branch: false, collapsed: false,
+    detail: {
+      title: "pDC", subtitle: "Tier 2 + Round 4d",
+      category: "pDC", catColor: "#3498DB",
+      gate: "pDC_high_confidence (58): anchor > q99.5 + support > q95 + multi-gene. pDC_like (37,603): NK-like low-effector cells reclassified in Round 4d.",
+      gate_type: "RNA score + post-hoc reclassification",
+      markers: ["PLD4", "PACSIN1", "CLEC4C", "LILRA4", "SCAMP5", "IRF7", "TCF4"],
+      papers: ["Matha 2024", "Wells 2025"],
+      paper_note: "pDC survived MACS because no CD123 in depletion panel. pDC_like cells are NK-score+ but lack effector genes.",
+      role: "Plasmacytoid dendritic cells. 58 high-confidence + 37,603 low-effector NK-like cells reclassified as pDC_like in Round 4d.",
+      freq: "23.4% of all cells",
+      notes: "pDC_like is the largest single population. These cells have weak NK signatures but no NKG7/GNLY/PRF1/KLRD1.",
+      warning: "pDC_like (37,603) may include heterogeneous populations beyond true pDCs.",
+      parents: ["all_cells"], children: []
+    }
+  },
+  "off_target": {
+    id: "off_target", label: "Off-target", count: 18591, color: "#A6761D",
+    x: 620, y: 130, w: 110, h: 36,
+    confidence: "medium", is_branch: false, collapsed: false,
+    detail: {
+      title: "Off-target", subtitle: "HSPC + Progenitor + DC",
+      category: "Off-target", catColor: "#A6761D",
+      gate: "HSPC (Tier 3 fallthrough, Round 4c), Progenitor_like (Round 4b), Canonical_DC (Tier 1.5)",
+      gate_type: "Multiple rounds",
+      markers: ["SOX4", "MEIS1", "ERG", "SPINK2 (HSPC)", "AXL", "SIGLEC6", "CD33 (DC)"],
+      papers: ["Hashemi 2024"],
+      paper_note: "HSPC are circulating hematopoietic progenitors co-enriched by MACS.",
+      role: "Cells that are neither ILC/NK nor classical contaminants. HSPC (17,775) dominate, plus Progenitor_like (542) and Canonical_DC (274).",
+      freq: "11.5% of all cells",
+      notes: "HSPC identified via SOX4/MEIS1/ERG expression; lack both NK and ILC identity scores.",
+      warning: null,
+      parents: ["all_cells"], children: []
+    }
+  },
+  "ilc_nk_pool": {
+    id: "ilc_nk_pool", label: "ILC/NK Pool", count: 41323, color: "#27AE60",
+    x: 1000, y: 130, w: 120, h: 36,
+    confidence: null, is_branch: true, collapsed: false,
+    detail: {
+      title: "ILC/NK Pool", subtitle: "Analysis target population",
+      category: "ILC/NK", catColor: "#27AE60",
+      gate: "Cells remaining after Tiers 0-2 + off-target removal",
+      gate_type: "Pass-through",
+      markers: [],
+      papers: [],
+      paper_note: "",
+      role: "The core analysis pool: 41,323 cells split into NK branch (31,116) and ILC branch (9,043) + unresolved (1,164).",
+      freq: "25.6% of all cells",
+      notes: "Split by NK identity score at Tier 3.",
+      warning: null,
+      parents: ["all_cells"], children: ["nk_branch","ilc_branch"]
+    }
+  },
+  "nk_branch": {
+    id: "nk_branch", label: "NK Branch", count: 31116, color: "#1ABC9C",
+    x: 1200, y: 240, w: 110, h: 32,
+    confidence: null, is_branch: true, collapsed: false,
+    detail: {
+      title: "NK Branch", subtitle: "Tier 3: NK identity score > 0",
+      category: "NK", catColor: "#1ABC9C",
+      gate: "nk_identity_score > 0 AND at least 1 effector gene (NKG7, KLRD1, GNLY, PRF1)",
+      gate_type: "RNA score",
+      markers: ["NKG7", "KLRD1", "GNLY", "PRF1", "FCGR3A"],
+      papers: ["Graydon 2023", "Swieboda 2024", "Li 2022"],
+      paper_note: "NK subtypes defined by CD16 (FCGR3A) protein and RNA expression. Swieboda 2024 validates CD56dim/bright classification; Li 2022 shows NK are primary IFN-γ producers post-boost.",
+      role: "Natural killer cells separated from ILCs by composite NK identity score requiring effector gene expression.",
+      freq: "19.3% of all cells (75.3% of ILC/NK pool)",
+      notes: "NK_like_loweffector cells (NK score > 0 but no effectors) reclassified as pDC_like in Round 4d.",
+      warning: null,
+      parents: ["ilc_nk_pool"], children: ["nk_cd56dim","nk_cd56bright","nk_intermediate"]
+    }
+  },
+  "ilc_branch": {
+    id: "ilc_branch", label: "ILC Branch", count: 10207, color: "#9B59B6",
+    x: 700, y: 240, w: 110, h: 32,
+    confidence: null, is_branch: true, collapsed: false,
+    detail: {
+      title: "ILC Branch", subtitle: "Tier 3: Not NK",
+      category: "ILC", catColor: "#9B59B6",
+      gate: "NOT NK branch AND (ilc_identity_score > 0 OR IL7R_positive OR CRTH2+ OR CD117+)",
+      gate_type: "Score + ADT",
+      markers: ["IL7R (RNA only)", "CRTH2/CD294 (ADT)", "CD117/KIT (ADT)"],
+      papers: ["Hazenberg 2014", "Mazzurana 2021", "Taheri 2024", "Mboko 2025"],
+      paper_note: "CD127/IL7R ADT is broken (mouse-reactive antibody); IL7R RNA used as proxy. Taheri 2024: ILC subset ratios shift with age (ILC1↑, ILC3↓). Mboko 2025: human ILCs show trained immunity post-vaccination.",
+      role: "Innate lymphoid cells and progenitors. Includes ILC2, ILC3, ILCP, and ILCP_KITlow populations.",
+      freq: "6.3% of all cells (24.7% of ILC/NK pool)",
+      notes: "Further split by CRTH2 ADT (totalVI fg_prob), then CD117 ADT, then RNA markers.",
+      warning: "CD127 ADT non-functional; all ILC gating uses RNA or other ADT markers.",
+      parents: ["ilc_nk_pool"], children: ["ilc2","crth2neg","linneg_unresolved"]
+    }
+  },
+  "nk_cd56dim": {
+    id: "nk_cd56dim", label: "NK CD56dim", count: 26318, color: "#16A085",
+    x: 1100, y: 350, w: 130, h: 36,
+    confidence: "high", is_branch: false, collapsed: false,
+    detail: {
+      title: "NK CD56dim", subtitle: "Tier 4: CD16-high NK cells",
+      category: "NK", catColor: "#16A085",
+      gate: "CD16 fg_prob > 0.8 (primary) + CD16-shed activated NK merged in (r=0.920)",
+      gate_type: "ADT + RNA rescue",
+      markers: ["FCGR3A", "FGFBP2", "NKG7", "GNLY", "PRF1", "CD16 ADT"],
+      papers: ["Graydon 2023", "Swieboda 2024"],
+      paper_note: "NK_unresolved merged into CD56dim based on r=0.920 transcriptome correlation (Graydon 2023 taxonomy). Swieboda 2024 validates CD127-/CD16+ phenotype.",
+      role: "Mature cytotoxic NK cells with high CD16 expression. Dominant NK population, includes CD16-shed activated cells.",
+      freq: "16.3% of all cells (84.6% of NK branch)",
+      notes: "Includes cells rescued by RNA: dim score > q80 + FGFBP2/FCGR3A expression.",
+      warning: null,
+      parents: ["nk_branch"], children: []
+    }
+  },
+  "nk_cd56bright": {
+    id: "nk_cd56bright", label: "NK CD56bright", count: 1285, color: "#148F77",
+    x: 1260, y: 350, w: 130, h: 36,
+    confidence: "medium", is_branch: false, collapsed: false,
+    detail: {
+      title: "NK CD56bright", subtitle: "Tier 4: CD16-low NK cells",
+      category: "NK", catColor: "#148F77",
+      gate: "CD16 fg_prob < 0.2 AND bright_score > q75 AND dim_score < q60",
+      gate_type: "ADT + RNA score",
+      markers: ["SELL", "GPR183", "IL7R", "XCL1", "XCL2", "GZMK", "CD16 ADT (low)"],
+      papers: ["Graydon 2023", "Darboe 2020", "Swieboda 2024"],
+      paper_note: "CD56bright are tissue-homing, cytokine-producing NK cells. Darboe 2020 frequencies from Gambian population (high pathogen burden); US donors expected lower.",
+      role: "Immunomodulatory NK cells with low CD16, high CD56. Produce cytokines rather than direct cytotoxicity.",
+      freq: "0.8% of all cells (4.1% of NK branch)",
+      notes: "Defined by CD16 low AND bright RNA signature. Pure bright without dim contamination.",
+      warning: null,
+      parents: ["nk_branch"], children: []
+    }
+  },
+  "nk_intermediate": {
+    id: "nk_intermediate", label: "NK Intermediate", count: 3513, color: "#45B39D",
+    x: 1420, y: 350, w: 140, h: 36,
+    confidence: "medium", is_branch: false, collapsed: false,
+    detail: {
+      title: "NK Intermediate", subtitle: "Tier 4: CD16-mid NK cells",
+      category: "NK", catColor: "#45B39D",
+      gate: "CD16 fg_prob 0.2-0.8 OR dual bright+dim scores (both > q70)",
+      gate_type: "ADT + Score",
+      markers: ["FCGR3A (intermediate)", "mixed bright/dim signature"],
+      papers: ["Graydon 2023"],
+      paper_note: "Transitional NK population between CD56bright and CD56dim states.",
+      role: "NK cells with intermediate CD16 expression or mixed bright/dim transcriptional signatures. Likely transitional.",
+      freq: "2.2% of all cells (11.3% of NK branch)",
+      notes: "Captures CD16-transitional and dual-scored cells that do not cleanly resolve to bright or dim.",
+      warning: null,
+      parents: ["nk_branch"], children: []
+    }
+  },
+  "ilc2": {
+    id: "ilc2", label: "ILC2", count: 1566, color: "#8E44AD",
+    x: 630, y: 350, w: 90, h: 36,
+    confidence: "high", is_branch: true, collapsed: false,
+    detail: {
+      title: "ILC2", subtitle: "Tier 5: CRTH2+ ILCs",
+      category: "ILC", catColor: "#8E44AD",
+      gate: "CRTH2 ADT+ via totalVI foreground probability (override, not ThresholdR GMM)",
+      gate_type: "ADT",
+      markers: ["CRTH2/CD294 (ADT)", "GATA3 (RNA)", "HPGDS", "IL1RL1", "PTGDR2"],
+      papers: ["Hazenberg 2014", "Mazzurana 2021", "Jaeger 2024"],
+      paper_note: "ILC2 defined by CRTH2 surface protein. Only 4 ADT markers available; CRTH2 is the key ILC2 discriminator.",
+      role: "Type 2 innate lymphoid cells. CRTH2+ cells further split by CD117 into CD117+ and CD117- subsets.",
+      freq: "1.0% of all cells (15.3% of ILC branch)",
+      notes: "CRTH2 uses totalVI fg_prob override, not ThresholdR GMM, for cleaner separation.",
+      warning: null,
+      parents: ["ilc_branch"], children: ["ilc2_cd117pos","ilc2_cd117neg"]
+    }
+  },
+  "crth2neg": {
+    id: "crth2neg", label: "CRTH2- ILCs", count: 7477, color: "#9575CD",
+    x: 820, y: 350, w: 110, h: 32,
+    confidence: null, is_branch: true, collapsed: false,
+    detail: {
+      title: "CRTH2- ILCs", subtitle: "Tier 5: CRTH2-negative ILC branch",
+      category: "ILC", catColor: "#9575CD",
+      gate: "CRTH2 ADT- (ILC branch cells that are not ILC2)",
+      gate_type: "ADT",
+      markers: ["CD117/KIT (ADT)", "RORC (RNA)", "TBX21 (RNA)", "IL7R (RNA)"],
+      papers: ["Hazenberg 2014"],
+      paper_note: "CRTH2- ILCs are further resolved by CD117 and RNA transcription factor expression.",
+      role: "Non-ILC2 innate lymphoid cells, split by CD117 into ILC3/ILCP (CD117+) and CD117- ILCs.",
+      freq: "4.6% of all cells",
+      notes: "Intermediate branch node. Not a final cell type label.",
+      warning: null,
+      parents: ["ilc_branch"], children: ["ilc3_ilcp","cd117neg_ilcs"]
+    }
+  },
+  "linneg_unresolved": {
+    id: "linneg_unresolved", label: "Linneg Unresolved", count: 1164, color: "#7F8C8D",
+    x: 440, y: 350, w: 150, h: 36,
+    confidence: "low", is_branch: false, collapsed: false,
+    detail: {
+      title: "Linneg Unresolved", subtitle: "ILC branch fallthrough",
+      category: "Unresolved", catColor: "#7F8C8D",
+      gate: "ILC branch cells that match no ILC subtype gate",
+      gate_type: "Fallthrough",
+      markers: [],
+      papers: [],
+      paper_note: "",
+      role: "Lineage-negative cells that entered the ILC branch but could not be classified into any ILC subtype. Likely a mix of damaged cells and rare populations.",
+      freq: "0.7% of all cells (11.4% of ILC branch)",
+      notes: "These cells are ILC-score-positive but do not express CRTH2 or CD117 at levels that pass gates, and lack definitive RNA markers.",
+      warning: "Heterogeneous fallthrough population; interpret with caution.",
+      parents: ["ilc_branch"], children: []
+    }
+  },
+  "ilc2_cd117pos": {
+    id: "ilc2_cd117pos", label: "ILC2 CD117+", count: 96, color: "#AF7AC5",
+    x: 550, y: 460, w: 120, h: 36,
+    confidence: "high", is_branch: false, collapsed: false,
+    detail: {
+      title: "ILC2 CD117+", subtitle: "CRTH2+ CD117+ ILC2",
+      category: "ILC", catColor: "#AF7AC5",
+      gate: "CRTH2+ AND CD117 ADT+",
+      gate_type: "ADT",
+      markers: ["CRTH2 (ADT)", "CD117/KIT (ADT)", "GATA3", "HPGDS"],
+      papers: ["Hazenberg 2014", "Mazzurana 2021"],
+      paper_note: "CD117+ ILC2 may represent a more progenitor-like or tissue-homing ILC2 subset.",
+      role: "CRTH2+CD117+ ILC2 cells. Rare subset that may retain progenitor capacity or tissue-homing potential.",
+      freq: "0.06% of all cells (6.1% of ILC2)",
+      notes: "Very small population (96 cells). Statistical analyses should account for low N.",
+      warning: null,
+      parents: ["ilc2"], children: []
+    }
+  },
+  "ilc2_cd117neg": {
+    id: "ilc2_cd117neg", label: "ILC2 CD117-", count: 1470, color: "#8E44AD",
+    x: 700, y: 460, w: 120, h: 36,
+    confidence: "high", is_branch: false, collapsed: false,
+    detail: {
+      title: "ILC2 CD117-", subtitle: "CRTH2+ CD117- ILC2",
+      category: "ILC", catColor: "#8E44AD",
+      gate: "CRTH2+ AND CD117 ADT-",
+      gate_type: "ADT",
+      markers: ["CRTH2 (ADT)", "GATA3", "HPGDS", "IL1RL1"],
+      papers: ["Hazenberg 2014", "Mazzurana 2021", "Jaeger 2024"],
+      paper_note: "Majority ILC2 population. CD117- ILC2 may represent more mature/activated state.",
+      role: "CRTH2+CD117- ILC2 cells. The dominant ILC2 subset in blood.",
+      freq: "0.9% of all cells (93.9% of ILC2)",
+      notes: "Main ILC2 population for downstream aging analyses.",
+      warning: null,
+      parents: ["ilc2"], children: []
+    }
+  },
+  "ilc3_ilcp": {
+    id: "ilc3_ilcp", label: "ILC3/ILCP", count: 4526, color: "#7E57C2",
+    x: 860, y: 460, w: 100, h: 32,
+    confidence: null, is_branch: true, collapsed: false,
+    detail: {
+      title: "ILC3/ILCP Branch", subtitle: "CRTH2- CD117+ ILCs",
+      category: "ILC", catColor: "#7E57C2",
+      gate: "CRTH2- AND CD117 ADT+",
+      gate_type: "ADT",
+      markers: ["CD117/KIT (ADT)", "RORC (RNA)", "IL7R (RNA)", "IL23R", "IL1R1"],
+      papers: ["Hazenberg 2014", "Mazzurana 2021"],
+      paper_note: "CD117+ CRTH2- cells include both ILC3 (RORC+) and ILC progenitors (RORC-).",
+      role: "Intermediate branch: CRTH2-CD117+ cells split by RORC RNA into ILC3 (RORC+) and ILCP (RORC-).",
+      freq: "2.8% of all cells",
+      notes: "Branch node. RORC expression distinguishes committed ILC3 from multipotent progenitors.",
+      warning: null,
+      parents: ["crth2neg"], children: ["ilc3","ilcp"]
+    }
+  },
+  "cd117neg_ilcs": {
+    id: "cd117neg_ilcs", label: "CD117- ILCs", count: 2951, color: "#B39DDB",
+    x: 1000, y: 460, w: 120, h: 32,
+    confidence: null, is_branch: true, collapsed: false,
+    detail: {
+      title: "CD117- ILCs", subtitle: "CRTH2- CD117- ILCs",
+      category: "ILC", catColor: "#B39DDB",
+      gate: "CRTH2- AND CD117 ADT-",
+      gate_type: "ADT",
+      markers: ["TBX21 (RNA)", "EOMES (RNA)", "IL7R (RNA)"],
+      papers: ["Simoni 2017", "Hazenberg 2014"],
+      paper_note: "CD117-CRTH2- ILCs include potential ILC1 and CD117-low progenitors.",
+      role: "CRTH2-CD117- cells split by RNA into ILC1-like (TBX21+EOMES-) and ILCP_KITlow (ILC signal+).",
+      freq: "1.8% of all cells",
+      notes: "Branch node. ILC1-like gate exists but yields 0 cells in this dataset.",
+      warning: null,
+      parents: ["crth2neg"], children: ["ilc1_like","ilcp_kitlow"]
+    }
+  },
+  "ilc3": {
+    id: "ilc3", label: "ILC3", count: 139, color: "#5E35B1",
+    x: 810, y: 570, w: 80, h: 36,
+    confidence: "medium", is_branch: false, collapsed: false,
+    detail: {
+      title: "ILC3", subtitle: "RORC+ CD117+ ILCs",
+      category: "ILC", catColor: "#5E35B1",
+      gate: "CRTH2- CD117+ AND RORC RNA+",
+      gate_type: "RNA",
+      markers: ["RORC", "IL23R", "IL1R1", "KIT/CD117", "IL7R", "AHR"],
+      papers: ["Hazenberg 2014", "Mazzurana 2021", "Bonne-Annee 2019"],
+      paper_note: "ILC3 are rare in blood. RORC is the key transcription factor.",
+      role: "Type 3 innate lymphoid cells. RORC+ cells within the CD117+ compartment. Very rare in peripheral blood.",
+      freq: "0.09% of all cells (3.1% of ILC3/ILCP branch)",
+      notes: "Only 139 cells. Underpowered for per-donor statistical tests.",
+      warning: null,
+      parents: ["ilc3_ilcp"], children: []
+    }
+  },
+  "ilcp": {
+    id: "ilcp", label: "ILCP", count: 4232, color: "#7E57C2",
+    x: 920, y: 570, w: 80, h: 36,
+    confidence: "medium", is_branch: false, collapsed: false,
+    detail: {
+      title: "ILCP", subtitle: "RORC- CD117+ ILC progenitors",
+      category: "ILC", catColor: "#7E57C2",
+      gate: "CRTH2- CD117+ AND RORC RNA-",
+      gate_type: "RNA",
+      markers: ["KIT/CD117 (ADT)", "IL7R (RNA)", "TCF7", "ID2", "TOX"],
+      papers: ["Hazenberg 2014", "Mazzurana 2021", "Falquet 2023"],
+      paper_note: "ILCP are multipotent ILC progenitors that can give rise to ILC1, ILC2, ILC3, and NK cells.",
+      role: "ILC progenitors. CD117+RORC- cells with multipotent differentiation capacity.",
+      freq: "2.6% of all cells (93.5% of ILC3/ILCP branch)",
+      notes: "Dominant population in the CD117+ CRTH2- compartment. A subset expresses RORC (ILCP_type3_biased).",
+      warning: null,
+      parents: ["ilc3_ilcp"], children: ["ilcp_t3b"]
+    }
+  },
+  "ilc1_like": {
+    id: "ilc1_like", label: "ILC1-like", count: 0, color: "#F39C12",
+    x: 1040, y: 570, w: 100, h: 36,
+    confidence: "low", is_branch: false, collapsed: false,
+    detail: {
+      title: "ILC1-like", subtitle: "TBX21+ EOMES- gate (0 cells)",
+      category: "ILC (disputed)", catColor: "#F39C12",
+      gate: "CRTH2- CD117- AND TBX21+ AND EOMES- AND low cytotoxicity",
+      gate_type: "RNA",
+      markers: ["TBX21", "EOMES (negative)", "IFNG", "TNF"],
+      papers: ["Simoni 2017", "Mazzurana 2021", "Taheri 2024"],
+      paper_note: "ILC1 existence in human blood is debated. Simoni 2017: ILC1 does NOT form a distinct cluster in blood — may represent contaminating T cells with ILC markers. Taheri 2024 reports age-related ILC1 frequency increase, but population is poorly defined.",
+      role: "Putative ILC1. Gate exists but 0 cells qualify — consistent with ILC1 being tissue-resident, not circulating. Simoni 2017 challenges existence as distinct blood population.",
+      freq: "0 cells (0%)",
+      notes: "Gate retained for completeness. The TBX21+EOMES-cyto-low phenotype does not occur in this blood dataset.",
+      warning: "0 cells classify as ILC1-like. This is expected for peripheral blood CITE-seq.",
+      parents: ["cd117neg_ilcs"], children: []
+    }
+  },
+  "ilcp_kitlow": {
+    id: "ilcp_kitlow", label: "ILCP KITlow", count: 2951, color: "#B39DDB",
+    x: 1180, y: 570, w: 120, h: 36,
+    confidence: "low", is_branch: false, collapsed: false,
+    detail: {
+      title: "ILCP KITlow", subtitle: "CD117- ILC-signal+ progenitors",
+      category: "ILC", catColor: "#B39DDB",
+      gate: "CRTH2- CD117- AND ILC identity signal+ (not TBX21+EOMES-)",
+      gate_type: "RNA",
+      markers: ["IL7R (RNA)", "ID2", "TCF7", "TOX", "KIT (low/absent ADT)"],
+      papers: ["Mazzurana 2021", "Wang 2023"],
+      paper_note: "CD117-low/neg ILC progenitors reported in blood. May be more differentiated than CD117+ ILCP.",
+      role: "ILC progenitors with low/absent CD117 protein. Express ILC identity genes but lack surface KIT.",
+      freq: "1.8% of all cells",
+      notes: "Confidence is low because the ILC-signal gate is broad. A subset expresses RORC (type3-biased).",
+      warning: null,
+      parents: ["cd117neg_ilcs"], children: ["ilcp_t3b"]
+    }
+  },
+  "ilcp_t3b": {
+    id: "ilcp_t3b", label: "ILCP Type3-biased", count: 155, color: "#CE93D8",
+    x: 1030, y: 680, w: 150, h: 36,
+    confidence: "low", is_branch: false, collapsed: false,
+    detail: {
+      title: "ILCP Type3-biased", subtitle: "RORC+ ILC progenitors",
+      category: "ILC", catColor: "#CE93D8",
+      gate: "ILCP or ILCP_KITlow AND RORC RNA+",
+      gate_type: "RNA",
+      markers: ["RORC", "IL7R", "ID2", "KIT (variable)"],
+      papers: ["Mazzurana 2021", "Falquet 2023"],
+      paper_note: "RORC+ progenitors have partial type-3 program but are not fully committed ILC3.",
+      role: "ILC progenitors expressing RORC, suggesting partial commitment to the ILC3 lineage without full ILC3 identity.",
+      freq: "0.1% of all cells",
+      notes: "Child of both ILCP (CD117+) and ILCP_KITlow (CD117-). 155 cells total.",
+      warning: "Very small population; may be noise in RORC detection.",
+      parents: ["ilcp", "ilcp_kitlow"], children: []
+    }
+  }
+};
+
+// Edge definitions
+var EDGES = [
+  { from: "all_cells", to: "lowquality", type: "filter", label: "QC fail" },
+  { from: "all_cells", to: "contaminants", type: "filter", label: "Lin+" },
+  { from: "all_cells", to: "pdc", type: "filter", label: "pDC program" },
+  { from: "all_cells", to: "off_target", type: "filter", label: "Off-target" },
+  { from: "all_cells", to: "ilc_nk_pool", type: "pass", label: "Pass" },
+  { from: "ilc_nk_pool", to: "nk_branch", type: "score", label: "NK score > 0" },
+  { from: "ilc_nk_pool", to: "ilc_branch", type: "score", label: "NK score \u2264 0" },
+  { from: "nk_branch", to: "nk_cd56dim", type: "adt", label: "CD16 hi" },
+  { from: "nk_branch", to: "nk_cd56bright", type: "adt", label: "CD16 lo" },
+  { from: "nk_branch", to: "nk_intermediate", type: "score", label: "CD16 mid" },
+  { from: "ilc_branch", to: "ilc2", type: "adt", label: "CRTH2+" },
+  { from: "ilc_branch", to: "crth2neg", type: "adt", label: "CRTH2\u2212" },
+  { from: "ilc_branch", to: "linneg_unresolved", type: "filter", label: "No match" },
+  { from: "ilc2", to: "ilc2_cd117pos", type: "adt", label: "CD117+" },
+  { from: "ilc2", to: "ilc2_cd117neg", type: "adt", label: "CD117\u2212" },
+  { from: "crth2neg", to: "ilc3_ilcp", type: "adt", label: "CD117+" },
+  { from: "crth2neg", to: "cd117neg_ilcs", type: "adt", label: "CD117\u2212" },
+  { from: "ilc3_ilcp", to: "ilc3", type: "rna", label: "RORC+" },
+  { from: "ilc3_ilcp", to: "ilcp", type: "rna", label: "RORC\u2212" },
+  { from: "cd117neg_ilcs", to: "ilc1_like", type: "rna", label: "TBX21+" },
+  { from: "cd117neg_ilcs", to: "ilcp_kitlow", type: "rna", label: "ILC signal+" },
+  { from: "ilcp", to: "ilcp_t3b", type: "rna", label: "RORC+" },
+  { from: "ilcp_kitlow", to: "ilcp_t3b", type: "rna", label: "RORC+" }
+];
+
+// ── SVG RENDERING ─────────────────────────────────────────────────────
+var svgNS = "http://www.w3.org/2000/svg";
+var svg = document.getElementById("treeSvg");
+var container = document.getElementById("svgContainer");
+
+var VB_W = 1620, VB_H = 770;
+var scale = 0.9;
+var panX = 0, panY = 0;
+var currentZoom = 1;
+var selectedNode = null;
+var abundanceMode = false;
+var collapsedNodes = {};
+
+function buildSVG() {
+  svg.innerHTML = "";
+  svg.setAttribute("viewBox", "0 0 " + VB_W + " " + VB_H);
+  svg.style.width = (VB_W * scale) + "px";
+  svg.style.height = (VB_H * scale) + "px";
+
+  // Defs for arrowheads and patterns
+  var defs = ce("defs");
+  // ADT arrow
+  appendMarker(defs, "arrow-adt", "#3498DB");
+  appendMarker(defs, "arrow-rna", "#E67E22");
+  appendMarker(defs, "arrow-score", "#2ECC71");
+  appendMarker(defs, "arrow-filter", "#E74C3C");
+  appendMarker(defs, "arrow-pass", "#888");
+  // ILC1 hatch pattern
+  var pat = ce("pattern");
+  pat.setAttribute("id","hatch-ilc1");
+  pat.setAttribute("patternUnits","userSpaceOnUse");
+  pat.setAttribute("width","6");
+  pat.setAttribute("height","6");
+  var pline = ce("line");
+  pline.setAttribute("x1","0"); pline.setAttribute("y1","0");
+  pline.setAttribute("x2","6"); pline.setAttribute("y2","6");
+  pline.setAttribute("stroke","#F39C12"); pline.setAttribute("stroke-width","1");
+  pat.appendChild(pline);
+  defs.appendChild(pat);
+  svg.appendChild(defs);
+
+  // Edge group (behind nodes)
+  var edgeG = ce("g"); edgeG.setAttribute("id","edgeGroup");
+  svg.appendChild(edgeG);
+
+  // Node group
+  var nodeG = ce("g"); nodeG.setAttribute("id","nodeGroup");
+  svg.appendChild(nodeG);
+
+  drawEdges(edgeG);
+  drawNodes(nodeG);
+  applyTransform();
+}
+
+function appendMarker(defs, id, color) {
+  var m = ce("marker");
+  m.setAttribute("id", id);
+  m.setAttribute("viewBox","0 0 10 10");
+  m.setAttribute("refX","9"); m.setAttribute("refY","5");
+  m.setAttribute("markerWidth","6"); m.setAttribute("markerHeight","6");
+  m.setAttribute("orient","auto-start-reverse");
+  var p = ce("path");
+  p.setAttribute("d","M0,0 L10,5 L0,10 z");
+  p.setAttribute("fill", color);
+  m.appendChild(p);
+  defs.appendChild(m);
+}
+
+function isVisible(nodeId) {
+  // Check if any ancestor is collapsed
+  for (var eid in EDGES) {
+    var e = EDGES[eid];
+    if (e.to === nodeId && collapsedNodes[e.from]) return false;
+    if (e.to === nodeId && !isVisible(e.from)) return false;
+  }
+  return true;
+}
+
+function getVisibleNodes() {
+  var vis = {};
+  for (var id in NODES) {
+    vis[id] = isVisible(id);
+  }
+  // Root always visible
+  vis["all_cells"] = true;
+  // Collapsed nodes themselves are visible
+  for (var cid in collapsedNodes) {
+    if (collapsedNodes[cid]) vis[cid] = true;
+  }
+  return vis;
+}
+
+function drawEdges(g) {
+  var vis = getVisibleNodes();
+  EDGES.forEach(function(e, i) {
+    if (!vis[e.from] || !vis[e.to]) return;
+    var from = NODES[e.from];
+    var to = NODES[e.to];
+    var x1 = from.x + from.w/2;
+    var y1 = from.y + from.h;
+    var x2 = to.x + to.w/2;
+    var y2 = to.y;
+
+    // Special case: ILCP_t3b has two parents; offset slightly
+    if (e.to === "ilcp_t3b" && e.from === "ilcp_kitlow") {
+      x2 += 15;
+    } else if (e.to === "ilcp_t3b" && e.from === "ilcp") {
+      x2 -= 15;
+    }
+
+    var midY = (y1 + y2) / 2;
+    var d = "M" + x1 + "," + y1 + " C" + x1 + "," + midY + " " + x2 + "," + midY + " " + x2 + "," + y2;
+
+    var path = ce("path");
+    path.setAttribute("d", d);
+    path.setAttribute("fill", "none");
+    path.setAttribute("class", "edge-path");
+    path.setAttribute("data-from", e.from);
+    path.setAttribute("data-to", e.to);
+
+    var col, dash, width, marker;
+    switch(e.type) {
+      case "adt": col="#3498DB"; dash=""; width=2; marker="url(#arrow-adt)"; break;
+      case "rna": col="#E67E22"; dash="6,3"; width=2; marker="url(#arrow-rna)"; break;
+      case "score": col="#2ECC71"; dash="8,3,2,3"; width=2; marker="url(#arrow-score)"; break;
+      case "filter": col="#E74C3C"; dash=""; width=1.5; marker="url(#arrow-filter)"; break;
+      case "pass": col="#888"; dash=""; width=1.5; marker="url(#arrow-pass)"; break;
+      default: col="#888"; dash=""; width=1; marker="";
+    }
+    path.setAttribute("stroke", col);
+    if (dash) path.setAttribute("stroke-dasharray", dash);
+    path.setAttribute("stroke-width", width);
+    if (marker) path.setAttribute("marker-end", marker);
+    g.appendChild(path);
+
+    // Edge label
+    if (e.label) {
+      var lx = (x1 + x2) / 2;
+      var ly = midY - 4;
+      var txt = ce("text");
+      txt.setAttribute("x", lx);
+      txt.setAttribute("y", ly);
+      txt.setAttribute("text-anchor", "middle");
+      txt.setAttribute("font-size", "9");
+      txt.setAttribute("fill", col);
+      txt.setAttribute("font-weight", "600");
+      txt.setAttribute("class", "edge-path");
+      txt.setAttribute("data-from", e.from);
+      txt.setAttribute("data-to", e.to);
+      txt.textContent = e.label;
+      g.appendChild(txt);
+    }
+  });
+}
+
+function drawNodes(g) {
+  var vis = getVisibleNodes();
+  for (var id in NODES) {
+    if (!vis[id]) continue;
+    var n = NODES[id];
+    var ng = ce("g");
+    ng.setAttribute("class", "node-group");
+    ng.setAttribute("data-id", id);
+    ng.setAttribute("transform", "translate(" + n.x + "," + n.y + ")");
+
+    // Confidence ring
+    if (n.confidence) {
+      var ringColor = n.confidence === "high" ? "#2ECC71" : n.confidence === "medium" ? "#F1C40F" : "#E74C3C";
+      var ring = ce("rect");
+      ring.setAttribute("x", -3); ring.setAttribute("y", -3);
+      ring.setAttribute("width", n.w + 6); ring.setAttribute("height", n.h + 6);
+      ring.setAttribute("rx", 8); ring.setAttribute("ry", 8);
+      ring.setAttribute("fill", "none");
+      ring.setAttribute("stroke", ringColor);
+      ring.setAttribute("stroke-width", 2);
+      ring.setAttribute("class", "conf-ring");
+      ng.appendChild(ring);
+    }
+
+    // Node rectangle
+    var rect = ce("rect");
+    rect.setAttribute("x", 0); rect.setAttribute("y", 0);
+    rect.setAttribute("width", n.w); rect.setAttribute("height", n.h);
+    rect.setAttribute("rx", 5); rect.setAttribute("ry", 5);
+
+    var fillColor = abundanceMode ? getAbundanceColor(n.count) : n.color;
+    rect.setAttribute("fill", fillColor);
+    rect.setAttribute("stroke", "var(--node-stroke)");
+    rect.setAttribute("stroke-width", 1);
+    rect.setAttribute("class", "node-rect");
+
+    if (n.is_branch) {
+      rect.setAttribute("stroke-dasharray", "4,2");
+      rect.setAttribute("fill-opacity", "0.7");
+    }
+    // ILC1-like: dashed double border
+    if (id === "ilc1_like") {
+      rect.setAttribute("stroke-dasharray", "3,2");
+      rect.setAttribute("stroke-width", 2);
+      var inner = ce("rect");
+      inner.setAttribute("x", 3); inner.setAttribute("y", 3);
+      inner.setAttribute("width", n.w - 6); inner.setAttribute("height", n.h - 6);
+      inner.setAttribute("rx", 3); inner.setAttribute("ry", 3);
+      inner.setAttribute("fill", "none");
+      inner.setAttribute("stroke", "#F39C12");
+      inner.setAttribute("stroke-width", 1);
+      inner.setAttribute("stroke-dasharray", "3,2");
+      ng.appendChild(rect);
+      ng.appendChild(inner);
+    } else {
+      ng.appendChild(rect);
+    }
+
+    // Node label
+    var txt = ce("text");
+    txt.setAttribute("x", n.w / 2);
+    txt.setAttribute("y", n.h / 2 - 2);
+    txt.setAttribute("text-anchor", "middle");
+    txt.setAttribute("dominant-baseline", "middle");
+    txt.setAttribute("font-size", n.w < 100 ? "10" : "11");
+    txt.setAttribute("font-weight", "600");
+    txt.setAttribute("fill", "#fff");
+    txt.setAttribute("pointer-events", "none");
+    txt.textContent = n.label;
+    ng.appendChild(txt);
+
+    // Count label below
+    var cnt = ce("text");
+    cnt.setAttribute("x", n.w / 2);
+    cnt.setAttribute("y", n.h + 12);
+    cnt.setAttribute("text-anchor", "middle");
+    cnt.setAttribute("font-size", "9");
+    cnt.setAttribute("fill", "var(--text2)");
+    cnt.setAttribute("pointer-events", "none");
+    var pct = (n.count / TOTAL * 100).toFixed(1);
+    cnt.textContent = numberFmt(n.count) + " (" + pct + "%)";
+    ng.appendChild(cnt);
+
+    // Collapse pill for branch nodes
+    if (n.is_branch && n.detail.children && n.detail.children.length > 0) {
+      var pill = ce("text");
+      pill.setAttribute("x", n.w + 4);
+      pill.setAttribute("y", 10);
+      pill.setAttribute("font-size", "12");
+      pill.setAttribute("fill", "var(--text2)");
+      pill.setAttribute("class", "collapse-pill");
+      pill.setAttribute("data-id", id);
+      pill.textContent = collapsedNodes[id] ? "\u25B6" : "\u25BC";
+      ng.appendChild(pill);
+    }
+
+    g.appendChild(ng);
+  }
+}
+
+function ce(tag) { return document.createElementNS(svgNS, tag); }
+
+function numberFmt(n) {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+function getAbundanceColor(count) {
+  if (count === 0) return "#333";
+  var pct = count / TOTAL;
+  // Log scale for better spread
+  var t = Math.min(1, Math.max(0, (Math.log10(pct * 100 + 1)) / Math.log10(101)));
+  // Blue (low) → Yellow (mid) → Red (high)
+  var r, g, b;
+  if (t < 0.5) {
+    var s = t * 2;
+    r = Math.round(30 + s * 225);
+    g = Math.round(30 + s * 200);
+    b = Math.round(180 - s * 130);
+  } else {
+    var s = (t - 0.5) * 2;
+    r = Math.round(255 - s * 20);
+    g = Math.round(230 - s * 200);
+    b = Math.round(50 - s * 30);
+  }
+  return "rgb(" + r + "," + g + "," + b + ")";
+}
+
+// ── TRANSFORM / ZOOM / PAN ───────────────────────────────────────────
+function applyTransform() {
+  var cw = container.clientWidth;
+  var ch = container.clientHeight;
+  var sw = VB_W * scale * currentZoom;
+  var sh = VB_H * scale * currentZoom;
+  svg.style.width = sw + "px";
+  svg.style.height = sh + "px";
+  svg.style.transform = "translate(" + panX + "px," + panY + "px)";
+}
+
+function fitView() {
+  currentZoom = 1;
+  panX = 0;
+  panY = 0;
+  var cw = container.clientWidth;
+  var ch = container.clientHeight;
+  var sw = VB_W * scale;
+  var sh = VB_H * scale;
+  currentZoom = Math.min(cw / sw, ch / sh, 1.2);
+  panX = (cw - sw * currentZoom) / 2;
+  panY = Math.max(0, (ch - sh * currentZoom) / 2);
+  applyTransform();
+}
+
+// Mouse wheel zoom
+container.addEventListener("wheel", function(e) {
+  if (!e.ctrlKey && !e.metaKey) return;
+  e.preventDefault();
+  var delta = e.deltaY > 0 ? 0.9 : 1.1;
+  var rect = container.getBoundingClientRect();
+  var mx = e.clientX - rect.left;
+  var my = e.clientY - rect.top;
+  panX = mx - (mx - panX) * delta;
+  panY = my - (my - panY) * delta;
+  currentZoom *= delta;
+  currentZoom = Math.max(0.3, Math.min(3, currentZoom));
+  applyTransform();
+}, {passive: false});
+
+// Pan
+var dragging = false, dragStartX, dragStartY;
+container.addEventListener("mousedown", function(e) {
+  if (e.target.closest(".node-group") || e.target.closest(".collapse-pill")) return;
+  dragging = true;
+  dragStartX = e.clientX - panX;
+  dragStartY = e.clientY - panY;
+});
+document.addEventListener("mousemove", function(e) {
+  if (!dragging) return;
+  panX = e.clientX - dragStartX;
+  panY = e.clientY - dragStartY;
+  applyTransform();
+});
+document.addEventListener("mouseup", function() { dragging = false; });
+
+// Zoom buttons
+document.getElementById("zoomIn").addEventListener("click", function() {
+  currentZoom *= 1.2;
+  currentZoom = Math.min(3, currentZoom);
+  applyTransform();
+});
+document.getElementById("zoomOut").addEventListener("click", function() {
+  currentZoom *= 0.8;
+  currentZoom = Math.max(0.3, currentZoom);
+  applyTransform();
+});
+document.getElementById("zoomFit").addEventListener("click", fitView);
+document.getElementById("resetView").addEventListener("click", function() {
+  fitView();
+  deselectAll();
+});
+
+// ── NODE INTERACTION ──────────────────────────────────────────────────
+var tooltip = document.getElementById("tooltip");
+
+svg.addEventListener("mouseover", function(e) {
+  var ng = e.target.closest(".node-group");
+  if (!ng) return;
+  var id = ng.getAttribute("data-id");
+  var n = NODES[id];
+  if (!n) return;
+  var pct = (n.count / TOTAL * 100).toFixed(1);
+  tooltip.innerHTML = '<div class="tt-title">' + n.label + '</div>' +
+    '<div class="tt-sub">' + numberFmt(n.count) + ' cells (' + pct + '%)</div>' +
+    (n.confidence ? '<div class="tt-sub">Confidence: ' + n.confidence + '</div>' : '') +
+    (n.detail.gate_type !== "None" ? '<div class="tt-sub">' + n.detail.gate_type + ': ' + truncate(n.detail.gate, 60) + '</div>' : '');
+  tooltip.classList.add("show");
+});
+
+svg.addEventListener("mousemove", function(e) {
+  if (tooltip.classList.contains("show")) {
+    tooltip.style.left = (e.clientX + 12) + "px";
+    tooltip.style.top = (e.clientY + 12) + "px";
+  }
+});
+
+svg.addEventListener("mouseout", function(e) {
+  var ng = e.target.closest(".node-group");
+  if (!ng) { tooltip.classList.remove("show"); return; }
+  var related = e.relatedTarget ? e.relatedTarget.closest(".node-group") : null;
+  if (!related || related !== ng) tooltip.classList.remove("show");
+});
+
+// Click: select node
+svg.addEventListener("click", function(e) {
+  var pill = e.target.closest(".collapse-pill");
+  if (pill) {
+    toggleCollapse(pill.getAttribute("data-id"));
+    return;
+  }
+  var ng = e.target.closest(".node-group");
+  if (!ng) { deselectAll(); return; }
+  var id = ng.getAttribute("data-id");
+  selectNode(id);
+});
+
+// Double-click: collapse
+svg.addEventListener("dblclick", function(e) {
+  var ng = e.target.closest(".node-group");
+  if (!ng) return;
+  var id = ng.getAttribute("data-id");
+  if (NODES[id].is_branch) {
+    toggleCollapse(id);
+  }
+});
+
+function toggleCollapse(id) {
+  collapsedNodes[id] = !collapsedNodes[id];
+  buildSVG();
+  if (selectedNode) {
+    highlightNode(selectedNode);
+  }
+}
+
+function selectNode(id) {
+  selectedNode = id;
+  highlightNode(id);
+  populatePanel(id);
+  updateBreadcrumb(id);
+  document.getElementById("detailPanel").classList.add("open");
+}
+
+function deselectAll() {
+  selectedNode = null;
+  document.querySelectorAll(".node-group").forEach(function(g) { g.classList.remove("selected","dimmed"); });
+  document.querySelectorAll(".edge-path").forEach(function(p) { p.classList.remove("highlighted","dimmed"); });
+  document.getElementById("detailPanel").classList.remove("open");
+  document.getElementById("breadcrumb").textContent = "All Cells";
+}
+
+function highlightNode(id) {
+  var connected = getConnectedIds(id);
+  document.querySelectorAll(".node-group").forEach(function(g) {
+    var nid = g.getAttribute("data-id");
+    g.classList.remove("selected","dimmed");
+    if (nid === id) g.classList.add("selected");
+    else if (!connected.has(nid)) g.classList.add("dimmed");
+  });
+  document.querySelectorAll(".edge-path").forEach(function(p) {
+    var f = p.getAttribute("data-from");
+    var t = p.getAttribute("data-to");
+    p.classList.remove("highlighted","dimmed");
+    if (f === id || t === id) p.classList.add("highlighted");
+    else if (!connected.has(f) && !connected.has(t)) p.classList.add("dimmed");
+  });
+}
+
+function getConnectedIds(id) {
+  var s = new Set();
+  s.add(id);
+  // Parents and children (direct)
+  EDGES.forEach(function(e) {
+    if (e.from === id) s.add(e.to);
+    if (e.to === id) s.add(e.from);
+  });
+  // Ancestors
+  function addAncestors(nid) {
+    EDGES.forEach(function(e) {
+      if (e.to === nid && !s.has(e.from)) {
+        s.add(e.from);
+        addAncestors(e.from);
+      }
+    });
+  }
+  addAncestors(id);
+  return s;
+}
+
+// ── DETAIL PANEL ──────────────────────────────────────────────────────
+function populatePanel(id) {
+  var n = NODES[id];
+  var d = n.detail;
+  var pct = (n.count / TOTAL * 100).toFixed(1);
+  var html = '<button class="detail-close" onclick="closePanel()">&times;</button>';
+  html += '<div class="detail-title" style="color:' + d.catColor + '">' + d.title + '</div>';
+  html += '<div class="detail-subtitle">' + d.subtitle + '</div>';
+  html += '<span class="detail-badge" style="background:' + d.catColor + '">' + d.category + '</span> ';
+  html += '<span style="font-size:13px;">' + numberFmt(n.count) + ' cells (' + pct + '%)</span>';
+
+  if (d.warning) {
+    html += '<div class="detail-warning" style="margin-top:10px;">' + d.warning + '</div>';
+  }
+
+  html += '<div class="detail-section"><h4>Gate</h4><p><strong>' + d.gate_type + '</strong>: ' + d.gate + '</p></div>';
+
+  if (d.markers.length) {
+    html += '<div class="detail-section"><h4>Key Markers</h4><p>' + d.markers.join(', ') + '</p></div>';
+  }
+
+  html += '<div class="detail-section"><h4>Role</h4><p>' + d.role + '</p></div>';
+  html += '<div class="detail-section"><h4>Expected Frequency</h4><p>' + d.freq + '</p></div>';
+
+  if (n.confidence) {
+    var confCol = n.confidence === "high" ? "#2ECC71" : n.confidence === "medium" ? "#F1C40F" : "#E74C3C";
+    html += '<div class="detail-section"><h4>Confidence</h4><p style="color:' + confCol + ';font-weight:600;">' + n.confidence.charAt(0).toUpperCase() + n.confidence.slice(1) + '</p></div>';
+  }
+
+  if (d.papers.length) {
+    html += '<div class="detail-section"><h4>References</h4><ul>';
+    d.papers.forEach(function(p) {
+      var info = PAPERS[p];
+      if (info) {
+        html += '<li><a class="paper-link" href="https://doi.org/' + info.doi + '" target="_blank">' + p + '</a> <span style="font-size:11px;color:var(--text2)">(' + info.journal + ')</span></li>';
+      } else {
+        html += '<li>' + p + '</li>';
+      }
+    });
+    html += '</ul>';
+    if (d.paper_note) html += '<p style="font-size:11px;color:var(--text2);margin-top:4px;">' + d.paper_note + '</p>';
+    html += '</div>';
+  }
+
+  if (d.notes) {
+    html += '<div class="detail-section"><h4>Notes</h4><p>' + d.notes + '</p></div>';
+  }
+
+  // Navigation
+  if (d.parents.length || d.children.length) {
+    html += '<div class="detail-section"><h4>Navigation</h4>';
+    if (d.parents.length) {
+      html += '<div style="margin-bottom:4px;font-size:11px;color:var(--text2);">Parents:</div><div class="detail-nav">';
+      d.parents.forEach(function(pid) {
+        html += '<button class="detail-nav-btn" onclick="selectNode(\'' + pid + '\')">' + NODES[pid].label + '</button>';
+      });
+      html += '</div>';
+    }
+    if (d.children.length) {
+      html += '<div style="margin-bottom:4px;margin-top:6px;font-size:11px;color:var(--text2);">Children:</div><div class="detail-nav">';
+      d.children.forEach(function(cid) {
+        html += '<button class="detail-nav-btn" onclick="selectNode(\'' + cid + '\')">' + NODES[cid].label + '</button>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  document.getElementById("detailInner").innerHTML = html;
+}
+
+window.closePanel = function() { deselectAll(); };
+window.selectNode = selectNode;
+
+// ── BREADCRUMB ────────────────────────────────────────────────────────
+function updateBreadcrumb(id) {
+  var trail = [];
+  var current = id;
+  var visited = new Set();
+  while (current && !visited.has(current)) {
+    visited.add(current);
+    trail.unshift(current);
+    // Find first parent
+    var parent = null;
+    for (var i = 0; i < EDGES.length; i++) {
+      if (EDGES[i].to === current) { parent = EDGES[i].from; break; }
+    }
+    current = parent;
+  }
+  var bar = document.getElementById("breadcrumb");
+  bar.innerHTML = trail.map(function(tid, idx) {
+    var n = NODES[tid];
+    var s = '<span onclick="selectNode(\'' + tid + '\')" style="' + (tid === id ? 'color:var(--highlight);font-weight:600' : '') + '">' + n.label + '</span>';
+    return idx < trail.length - 1 ? s + '<span class="sep">\u203A</span>' : s;
+  }).join('');
+}
+
+// ── SEARCH ────────────────────────────────────────────────────────────
+var searchBox = document.getElementById("searchBox");
+searchBox.addEventListener("input", function() {
+  var q = this.value.toLowerCase().trim();
+  if (!q) {
+    document.querySelectorAll(".node-group").forEach(function(g) { g.classList.remove("dimmed"); });
+    return;
+  }
+  document.querySelectorAll(".node-group").forEach(function(g) {
+    var id = g.getAttribute("data-id");
+    var n = NODES[id];
+    var match = n.label.toLowerCase().indexOf(q) >= 0 ||
+                n.detail.title.toLowerCase().indexOf(q) >= 0 ||
+                n.detail.category.toLowerCase().indexOf(q) >= 0 ||
+                n.detail.markers.join(" ").toLowerCase().indexOf(q) >= 0;
+    if (match) g.classList.remove("dimmed");
+    else g.classList.add("dimmed");
+  });
+});
+
+// ── THEME TOGGLE ──────────────────────────────────────────────────────
+var themeBtn = document.getElementById("themeToggle");
+themeBtn.addEventListener("click", function() {
+  document.body.classList.toggle("light");
+});
+
+// ── ABUNDANCE TOGGLE ──────────────────────────────────────────────────
+var abundBtn = document.getElementById("abundanceToggle");
+abundBtn.addEventListener("click", function() {
+  abundanceMode = !abundanceMode;
+  abundBtn.classList.toggle("active", abundanceMode);
+  buildSVG();
+  if (selectedNode) highlightNode(selectedNode);
+});
+
+// ── EXPAND ALL ────────────────────────────────────────────────────────
+document.getElementById("expandAll").addEventListener("click", function() {
+  collapsedNodes = {};
+  buildSVG();
+  if (selectedNode) highlightNode(selectedNode);
+});
+
+// ── HELPERS ───────────────────────────────────────────────────────────
+function truncate(s, len) {
+  return s.length > len ? s.substring(0, len) + "..." : s;
+}
+
+// ── FIGURES OVERLAY ───────────────────────────────────────────────────
+var figOverlay = document.getElementById("figOverlay");
+document.getElementById("toggleFigures").addEventListener("click", function() {
+  figOverlay.classList.toggle("show");
+});
+document.getElementById("figClose").addEventListener("click", function() {
+  figOverlay.classList.remove("show");
+});
+figOverlay.addEventListener("click", function(e) {
+  if (e.target === figOverlay) figOverlay.classList.remove("show");
+});
+document.addEventListener("keydown", function(e) {
+  if (e.key === "Escape" && figOverlay.classList.contains("show")) {
+    figOverlay.classList.remove("show");
+  }
+});
+document.querySelectorAll(".fig-tab").forEach(function(tab) {
+  tab.addEventListener("click", function() {
+    document.querySelectorAll(".fig-tab").forEach(function(t) { t.classList.remove("active"); });
+    document.querySelectorAll(".fig-panel").forEach(function(p) { p.classList.remove("active"); });
+    tab.classList.add("active");
+    document.getElementById("fig-" + tab.getAttribute("data-fig")).classList.add("active");
+  });
+});
+
+// ── REFERENCE TABLE TOGGLE ────────────────────────────────────────────
+var refOverlay = document.getElementById("refTableOverlay");
+document.getElementById("toggleRefTable").addEventListener("click", function() {
+  refOverlay.classList.toggle("show");
+});
+document.getElementById("refTableClose").addEventListener("click", function() {
+  refOverlay.classList.remove("show");
+});
+refOverlay.addEventListener("click", function(e) {
+  if (e.target === refOverlay) refOverlay.classList.remove("show");
+});
+document.addEventListener("keydown", function(e) {
+  if (e.key === "Escape" && refOverlay.classList.contains("show")) {
+    refOverlay.classList.remove("show");
+  }
+});
+
+// ── INIT ──────────────────────────────────────────────────────────────
+buildSVG();
+setTimeout(fitView, 50);
+window.addEventListener("resize", fitView);
+
+})();
+</script>
+</body>
+</html>
